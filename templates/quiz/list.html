@@ -297,11 +297,11 @@
     {% for quiz in quizzes %}
     <div class="quiz-card-modern">
       <!-- Top Topic Accent Line -->
-      {% if 'STD 5-6' in quiz.title or 'Basics' in quiz.title or 'Fundamentals' in quiz.title or 'Input' in quiz.title or 'Output' in quiz.title or 'Hardware' in quiz.title or 'Paint' in quiz.title or 'Safety' in quiz.title or 'Windows' in quiz.title %}
+      {% if 'STD 5-6' in quiz.title or 'ધોરણ ૫-૬' in quiz.title or 'Basics' in quiz.title or 'Fundamentals' in quiz.title or 'Input' in quiz.title or 'Output' in quiz.title or 'Hardware' in quiz.title or 'Paint' in quiz.title or 'Safety' in quiz.title or 'Windows' in quiz.title or 'પરિચય' in quiz.title or 'ઇનપુટ' in quiz.title or 'આઉટપુટ' in quiz.title or 'હાર્ડવેર' in quiz.title or 'પેઇન્ટ' in quiz.title or 'વિન્ડોઝ' in quiz.title %}
         <div class="quiz-card-accent fundamentals"></div>
-      {% elif 'Word' in quiz.title or 'Excel' in quiz.title or 'PowerPoint' in quiz.title %}
+      {% elif 'Word' in quiz.title or 'Excel' in quiz.title or 'PowerPoint' in quiz.title or 'વર્ડ' in quiz.title or 'એક્સેલ' in quiz.title or 'પાવરપોઇન્ટ' in quiz.title %}
         <div class="quiz-card-accent msoffice"></div>
-      {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title or 'Cyber' in quiz.title or 'Security' in quiz.title %}
+      {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title or 'Cyber' in quiz.title or 'Security' in quiz.title or 'નેટવર્ક' in quiz.title or 'ઇન્ટરનેટ' in quiz.title or 'મેઇલ' in quiz.title or 'સાયબર' in quiz.title %}
         <div class="quiz-card-accent networking"></div>
       {% else %}
         <div class="quiz-card-accent coding"></div>
@@ -310,35 +310,35 @@
       <!-- Card Header -->
       <div class="quiz-card-header">
         <div class="d-flex items-center gap-3">
-          {% if 'Excel' in quiz.title %}
+          {% if 'Excel' in quiz.title or 'એક્સેલ' in quiz.title %}
             <div class="quiz-topic-icon green"><i class="fas fa-file-excel"></i></div>
-          {% elif 'Word' in quiz.title %}
+          {% elif 'Word' in quiz.title or 'વર્ડ' in quiz.title %}
             <div class="quiz-topic-icon blue"><i class="fas fa-file-word"></i></div>
-          {% elif 'PowerPoint' in quiz.title %}
+          {% elif 'PowerPoint' in quiz.title or 'પાવરપોઇન્ટ' in quiz.title %}
             <div class="quiz-topic-icon orange"><i class="fas fa-file-powerpoint"></i></div>
-          {% elif 'Paint' in quiz.title %}
+          {% elif 'Paint' in quiz.title or 'પેઇન્ટ' in quiz.title %}
             <div class="quiz-topic-icon purple"><i class="fas fa-palette"></i></div>
-          {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title %}
+          {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title or 'નેટવર્ક' in quiz.title or 'ઇન્ટરનેટ' in quiz.title or 'મેઇલ' in quiz.title %}
             <div class="quiz-topic-icon green"><i class="fas fa-wifi"></i></div>
-          {% elif 'Cyber' in quiz.title or 'Security' in quiz.title or 'Safety' in quiz.title %}
+          {% elif 'Cyber' in quiz.title or 'Security' in quiz.title or 'Safety' in quiz.title or 'સુરક્ષા' in quiz.title or 'સાયબર' in quiz.title %}
             <div class="quiz-topic-icon blue"><i class="fas fa-shield-alt"></i></div>
-          {% elif 'Coding' in quiz.title or 'Algorithm' in quiz.title or 'Logic' in quiz.title %}
+          {% elif 'Coding' in quiz.title or 'Algorithm' in quiz.title or 'Logic' in quiz.title or 'કોડિંગ' in quiz.title or 'અલ્ગોરિધમ' in quiz.title %}
             <div class="quiz-topic-icon orange"><i class="fas fa-code"></i></div>
-          {% elif 'Keyboard' in quiz.title or 'Shortcut' in quiz.title %}
+          {% elif 'Keyboard' in quiz.title or 'Shortcut' in quiz.title or 'કીબોર્ડ' in quiz.title %}
             <div class="quiz-topic-icon blue"><i class="fas fa-keyboard"></i></div>
-          {% elif 'Storage' in quiz.title or 'RAM' in quiz.title %}
+          {% elif 'Storage' in quiz.title or 'RAM' in quiz.title or 'મેમરી' in quiz.title %}
             <div class="quiz-topic-icon purple"><i class="fas fa-memory"></i></div>
           {% else %}
             <div class="quiz-topic-icon blue"><i class="fas fa-desktop"></i></div>
           {% endif %}
 
           <div>
-            {% if 'STD 5-6' in quiz.title %}
-              <span class="quiz-grade-tag std56"><i class="fas fa-graduation-cap"></i> STD 5 - 6</span>
-            {% elif 'STD 6-8' in quiz.title or 'STD 7-8' in quiz.title or 'STD 5-7' in quiz.title or 'STD 6-7' in quiz.title %}
-              <span class="quiz-grade-tag std78"><i class="fas fa-graduation-cap"></i> STD 7 - 8</span>
+            {% if 'STD 5-6' in quiz.title or 'ધોરણ ૫-૬' in quiz.title %}
+              <span class="quiz-grade-tag std56"><i class="fas fa-graduation-cap"></i> ધોરણ ૫ - ૬</span>
+            {% elif 'STD 6-8' in quiz.title or 'STD 7-8' in quiz.title or 'STD 5-7' in quiz.title or 'STD 6-7' in quiz.title or 'ધોરણ ૭-૮' in quiz.title or 'ધોરણ ૬-૮' in quiz.title or 'ધોરણ ૬-૭' in quiz.title or 'ધોરણ ૫-૭' in quiz.title %}
+              <span class="quiz-grade-tag std78"><i class="fas fa-graduation-cap"></i> ધોરણ ૭ - ૮</span>
             {% else %}
-              <span class="quiz-grade-tag std56"><i class="fas fa-book"></i> STD 5 - 8</span>
+              <span class="quiz-grade-tag std56"><i class="fas fa-book"></i> ધોરણ ૫ - ૮</span>
             {% endif %}
           </div>
         </div>

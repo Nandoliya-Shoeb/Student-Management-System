@@ -892,22 +892,28 @@ def quiz_list(request):
     category = request.GET.get('category', 'all').strip()
     if category == 'std56':
         quizzes = quizzes.filter(
-            Q(title__icontains='STD 5-6') | Q(title__icontains='Basics') | Q(title__icontains='Fundamentals') |
+            Q(title__icontains='STD 5-6') | Q(title__icontains='ધોરણ ૫-૬') | Q(title__icontains='Basics') | Q(title__icontains='Fundamentals') |
             Q(title__icontains='Input') | Q(title__icontains='Output') | Q(title__icontains='Hardware') |
-            Q(title__icontains='Paint') | Q(title__icontains='Safety') | Q(title__icontains='Windows')
+            Q(title__icontains='Paint') | Q(title__icontains='Safety') | Q(title__icontains='Windows') |
+            Q(title__icontains='પરિચય') | Q(title__icontains='ઇનપુટ') | Q(title__icontains='આઉટપુટ') |
+            Q(title__icontains='હાર્ડવેર') | Q(title__icontains='પેઇન્ટ') | Q(title__icontains='સુરક્ષા') |
+            Q(title__icontains='વિન્ડોઝ')
         )
     elif category == 'msoffice':
         quizzes = quizzes.filter(
-            Q(title__icontains='Word') | Q(title__icontains='Excel') | Q(title__icontains='PowerPoint')
+            Q(title__icontains='Word') | Q(title__icontains='Excel') | Q(title__icontains='PowerPoint') |
+            Q(title__icontains='વર્ડ') | Q(title__icontains='એક્સેલ') | Q(title__icontains='પાવરપોઇન્ટ')
         )
     elif category == 'networking':
         quizzes = quizzes.filter(
             Q(title__icontains='Network') | Q(title__icontains='Internet') |
-            Q(title__icontains='Mail') | Q(title__icontains='Email') | Q(title__icontains='Cyber') | Q(title__icontains='Security')
+            Q(title__icontains='Mail') | Q(title__icontains='Email') | Q(title__icontains='Cyber') | Q(title__icontains='Security') |
+            Q(title__icontains='નેટવર્ક') | Q(title__icontains='ઇન્ટરનેટ') | Q(title__icontains='મેઇલ') | Q(title__icontains='સાયબર')
         )
     elif category == 'coding':
         quizzes = quizzes.filter(
-            Q(title__icontains='Coding') | Q(title__icontains='Algorithm') | Q(title__icontains='Logic') | Q(title__icontains='Evolution')
+            Q(title__icontains='Coding') | Q(title__icontains='Algorithm') | Q(title__icontains='Logic') | Q(title__icontains='Evolution') |
+            Q(title__icontains='કોડિંગ') | Q(title__icontains='અલ્ગોરિધમ') | Q(title__icontains='ઇતિહાસ')
         )
 
     # Student filtering
