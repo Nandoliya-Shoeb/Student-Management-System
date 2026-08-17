@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Quiz Result" %} — {{ quiz_result.quiz.title }}{% endblock %}
+{% block page_title %}{% trans "Quiz Performance Report" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between items-center flex-wrap gap-3 mb-5">
+  <div>
+    <h1 class="fs-xl fw-700">{{ quiz_result.quiz.title }}</h1>
+    <div class="text-muted fs-sm">
+      <span><i class="fas fa-user me-1"></i>{{ quiz_result.student.name }} ({{ quiz_result.student.student_id }})</span>
+      <span class="mx-2">•</span>
+      <span><i class="fas fa-calendar-alt me-1"></i>{{ quiz_result.taken_date|date:"d M Y H:i" }}</span>
+      <span class="mx-2">•</span>
+      <span><i class="fas fa-stopwatch me-1"></i>{{ time_taken_formatted }}</span>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'quiz_result_pdf' quiz_result.pk %}" class="btn btn-danger btn-sm" target="_blank">
+      <i class="fas fa-file-pdf me-1"></i>{% trans "Download PDF" %}
+    </a>
+    {% if is_student_view %}
+      <a href="{% url 'student_dashboard' %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>{% trans "Dashboard" %}
+      </a>
+    {% else %}
+      <a href="{% url 'quiz_list' %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>{% trans "All Quizzes" %}
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Score Cards Grid -->
+<div class="stat-cards mb-5">
+  <div class="stat-card">
+    <div class="stat-icon {% if quiz_result.passed %}green{% else %}red{% endif %}">
+      <i class="fas {% if quiz_result.passed %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Final Status" %}</div>
+      <div class="stat-value">
+        {% if quiz_result.passed %}
+          <span class="text-success">{% trans "Passed" %}</span>
+        {% else %}
+          <span class="text-danger">{% trans "Failed" %}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <i class="fas fa-percentage"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Percentage" %}</div>
+      <div class="stat-value">{{ quiz_result.percentage }}%</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon amber">
+      <i class="fas fa-bullseye"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Score / Total" %}</div>
+      <div class="stat-value">{{ quiz_result.total_marks }} <span class="fs-sm fw-600 text-muted">/ {{ quiz_result.quiz.get_total_marks }}</span></div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon cyan">
+      <i class="fas fa-clock"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Time Taken" %}</div>
+      <div class="stat-value" style="font-size: var(--fs-xl);">{{ time_taken_formatted }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Breakdown -->
+<div class="d-grid gap-3 mb-5" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+  <div class="p-3 text-center rounded border" style="background: var(--clr-success-light); border-color: hsla(142,76%,36%,.2) !important;">
+    <div class="fs-xl fw-700 text-success">{{ quiz_result.correct_answers }}</div>
+    <div class="fs-xs fw-600 text-muted">{% trans "Correct" %}</div>
+  </div>
+
+  <div class="p-3 text-center rounded border" style="background: var(--clr-danger-light); border-color: hsla(0,72%,51%,.2) !important;">
+    <div class="fs-xl fw-700 text-danger">{{ quiz_result.wrong_answers }}</div>
+    <div class="fs-xs fw-600 text-muted">{% trans "Wrong" %}</div>
+  </div>
+
+  <div class="p-3 text-center rounded border" style="background: var(--clr-surface-2); border-color: var(--clr-border) !important;">
+    <div class="fs-xl fw-700 text-muted">{{ quiz_result.unanswered }}</div>
+    <div class="fs-xs fw-600 text-muted">{% trans "Unanswered" %}</div>
+  </div>
+
+  <div class="p-3 text-center rounded border" style="background: var(--clr-info-light); border-color: hsla(199,89%,48%,.2) !important;">
+    <div class="fs-xl fw-700 text-info">{{ quiz_result.quiz.passing_percentage }}%</div>
+    <div class="fs-xs fw-600 text-muted">{% trans "Passing Required" %}</div>
+  </div>
+</div>
+
+<!-- Question-by-Question Review -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-list-check text-primary me-2"></i>{% trans "Question-wise Review" %}
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50px;">#</th>
+            <th>{% trans "Question" %}</th>
+            <th>{% trans "Your Answer" %}</th>
+            <th>{% trans "Correct Answer" %}</th>
+            <th>{% trans "Result" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for answer in student_answers %}
+          <tr>
+            <td class="fw-700 text-muted">{{ forloop.counter }}</td>
+            <td>
+              <div class="fw-600">{{ answer.question.question_text }}</div>
+              {% if answer.question.explanation %}
+                <div class="fs-xs text-muted mt-1"><i class="fas fa-lightbulb text-warning me-1"></i>{{ answer.question.explanation }}</div>
+              {% endif %}
+            </td>
+            <td>
+              {% if answer.selected_option == 'unanswered' %}
+                <span class="badge badge-muted">{% trans "Unanswered" %}</span>
+              {% else %}
+                <span class="badge {% if answer.is_correct %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ answer.selected_option }}
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-success">{{ answer.question.correct_option }}</span>
+            </td>
+            <td>
+              {% if answer.is_correct %}
+                <span class="text-success fw-600"><i class="fas fa-check-circle me-1"></i>{% trans "Correct" %}</span>
+              {% elif answer.selected_option == 'unanswered' %}
+                <span class="text-muted"><i class="fas fa-minus-circle me-1"></i>{% trans "Unanswered" %}</span>
+              {% else %}
+                <span class="text-danger fw-600"><i class="fas fa-times-circle me-1"></i>{% trans "Wrong" %}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

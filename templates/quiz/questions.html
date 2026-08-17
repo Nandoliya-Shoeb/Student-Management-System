@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ quiz.title }} — {% trans "Questions" %}{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between items-center flex-wrap gap-2 mb-5">
+  <div>
+    <h1 class="fs-xl fw-700">{{ quiz.title }}</h1>
+    <div class="text-muted fs-sm">{{ quiz.description|default:"—" }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'question_create' quiz.pk %}" class="btn btn-primary btn-sm">
+      <i class="fas fa-plus-circle me-1"></i>{% trans "Add Question" %}
+    </a>
+    <a href="{% url 'quiz_list' %}" class="btn btn-outline btn-sm">
+      <i class="fas fa-arrow-left me-1"></i>{% trans "Back to Quizzes" %}
+    </a>
+  </div>
+</div>
+
+<div class="stat-cards mb-5">
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <i class="fas fa-list-ol"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Questions" %}</div>
+      <div class="stat-value">{{ question_count }} / {{ quiz.total_questions }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <i class="fas fa-star"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Total Marks" %}</div>
+      <div class="stat-value">{{ quiz.get_total_marks }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon amber">
+      <i class="fas fa-percentage"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Pass %" %}</div>
+      <div class="stat-value">{{ quiz.passing_percentage }}%</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon {% if quiz.is_active %}cyan{% else %}red{% endif %}">
+      <i class="fas {% if quiz.is_active %}fa-check{% else %}fa-times{% endif %}"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Status" %}</div>
+      <div class="stat-value" style="font-size: var(--fs-lg);">
+        {% if quiz.is_active %}{% trans "Active" %}{% else %}{% trans "Inactive" %}{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if questions %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-question-circle text-primary me-2"></i>{% trans "Question List" %}
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>{% trans "Question Text" %}</th>
+              <th>{% trans "Options" %}</th>
+              <th>{% trans "Correct" %}</th>
+              <th class="text-right">{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for question in questions %}
+            <tr>
+              <td class="fw-700 text-muted">{{ forloop.counter }}</td>
+              <td>
+                <div class="fw-600">{{ question.question_text }}</div>
+                {% if question.explanation %}
+                  <div class="fs-xs text-muted mt-1">{{ question.explanation }}</div>
+                {% endif %}
+              </td>
+              <td>
+                <div class="fs-xs text-muted">
+                  <div><strong>A:</strong> {{ question.option_a|truncatewords:4 }}</div>
+                  <div><strong>B:</strong> {{ question.option_b|truncatewords:4 }}</div>
+                  <div><strong>C:</strong> {{ question.option_c|truncatewords:4 }}</div>
+                  <div><strong>D:</strong> {{ question.option_d|truncatewords:4 }}</div>
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-success">{{ question.correct_option }}</span>
+              </td>
+              <td class="text-right">
+                <a href="{% url 'question_edit' question.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Edit' %}">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'question_delete' question.pk %}" class="btn btn-ghost btn-sm text-danger" title="{% trans 'Delete' %}">
+                  <i class="fas fa-trash"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-question-circle"></i></div>
+      <div class="empty-title">{% trans "No questions added yet." %}</div>
+      <a href="{% url 'question_create' quiz.pk %}" class="btn btn-primary btn-sm mt-3">
+        <i class="fas fa-plus-circle me-1"></i>{% trans "Add First Question" %}
+      </a>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ title }} — {{ quiz.title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div class="card">
+    <div class="card-header justify-between">
+      <div class="card-title">
+        <i class="fas fa-question-circle text-primary me-2"></i>{{ title }}
+      </div>
+      <a href="{% url 'quiz_questions' quiz.pk %}" class="btn btn-ghost btn-sm">&larr; {% trans "Back to Questions" %}</a>
+    </div>
+    <div class="card-body">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label class="form-label" for="id_question_text">{% trans "Question Text" %} <span class="req">*</span></label>
+          {{ form.question_text }}
+          {% if form.question_text.errors %}<div class="form-error">{{ form.question_text.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_option_a">{% trans "Option A" %} <span class="req">*</span></label>
+            {{ form.option_a }}
+            {% if form.option_a.errors %}<div class="form-error">{{ form.option_a.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_option_b">{% trans "Option B" %} <span class="req">*</span></label>
+            {{ form.option_b }}
+            {% if form.option_b.errors %}<div class="form-error">{{ form.option_b.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_option_c">{% trans "Option C" %} <span class="req">*</span></label>
+            {{ form.option_c }}
+            {% if form.option_c.errors %}<div class="form-error">{{ form.option_c.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_option_d">{% trans "Option D" %} <span class="req">*</span></label>
+            {{ form.option_d }}
+            {% if form.option_d.errors %}<div class="form-error">{{ form.option_d.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_correct_option">{% trans "Correct Option" %} <span class="req">*</span></label>
+          {{ form.correct_option }}
+          {% if form.correct_option.errors %}<div class="form-error">{{ form.correct_option.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_explanation">{% trans "Explanation" %} ({% trans "Optional" %})</label>
+          {{ form.explanation }}
+          {% if form.explanation.errors %}<div class="form-error">{{ form.explanation.errors }}</div>{% endif %}
+        </div>
+
+        <div class="d-flex justify-end gap-2 mt-5 pt-4 border-top">
+          <a href="{% url 'quiz_questions' quiz.pk %}" class="btn btn-outline">{% trans "Cancel" %}</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>{% trans "Save Question" %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ title }} — {% trans "Student Management System" %}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div class="card">
+    <div class="card-header justify-between">
+      <div class="card-title">
+        <i class="fas fa-receipt text-primary me-2"></i>{{ title }}
+      </div>
+      <a href="{% url 'fee_list' %}" class="btn btn-ghost btn-sm">&larr; {% trans "Back" %}</a>
+    </div>
+    <div class="card-body">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label class="form-label" for="id_student">{% trans "Student" %} <span class="req">*</span></label>
+          {{ form.student }}
+          {% if form.student.errors %}<div class="form-error">{{ form.student.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_amount">{% trans "Amount (₹)" %} <span class="req">*</span></label>
+            {{ form.amount }}
+            {% if form.amount.errors %}<div class="form-error">{{ form.amount.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_fee_type">{% trans "Fee Type" %} <span class="req">*</span></label>
+            {{ form.fee_type }}
+            {% if form.fee_type.errors %}<div class="form-error">{{ form.fee_type.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_status">{% trans "Payment Status" %}</label>
+            {{ form.status }}
+            {% if form.status.errors %}<div class="form-error">{{ form.status.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_due_date">{% trans "Due Date" %} <span class="req">*</span></label>
+            {{ form.due_date }}
+            {% if form.due_date.errors %}<div class="form-error">{{ form.due_date.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_payment_date">{% trans "Payment Date" %}</label>
+            {{ form.payment_date }}
+            {% if form.payment_date.errors %}<div class="form-error">{{ form.payment_date.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_payment_method">{% trans "Payment Method" %}</label>
+            {{ form.payment_method }}
+            {% if form.payment_method.errors %}<div class="form-error">{{ form.payment_method.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="d-flex justify-end gap-2 mt-5 pt-3 border-top">
+          <a href="{% url 'fee_list' %}" class="btn btn-outline">{% trans "Cancel" %}</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>{% trans "Save Fee Record" %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

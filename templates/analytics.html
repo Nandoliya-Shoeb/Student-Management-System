@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Analytics & Performance" %} — {% trans "Student Management System" %}{% endblock %}
+{% block page_title %}{% trans "Analytics" %}{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between items-center flex-wrap gap-2 mb-5">
+  <div>
+    <h1 class="fs-xl fw-700">
+      {% if is_student_view %}{% trans "My Learning Analytics" %}{% else %}{% trans "Academic Performance Analytics" %}{% endif %}
+    </h1>
+    <div class="text-muted fs-sm">
+      {% if is_student_view %}{% trans "Track your progress and test scores over time" %}{% else %}{% trans "Institution-wide academic metrics and test distributions" %}{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-cards mb-5">
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fas fa-tasks"></i></div>
+    <div>
+      <div class="stat-label">{% trans "Total Attempts" %}</div>
+      <div class="stat-value">{{ total_attempts }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fas fa-chart-line"></i></div>
+    <div>
+      <div class="stat-label">{% trans "Average Score" %}</div>
+      <div class="stat-value">{{ avg_score }}%</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon amber"><i class="fas fa-trophy"></i></div>
+    <div>
+      <div class="stat-label">{% trans "Best Score" %}</div>
+      <div class="stat-value">{{ best_score }}%</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon cyan"><i class="fas fa-check-circle"></i></div>
+    <div>
+      <div class="stat-label">{% trans "Passed Tests" %}</div>
+      <div class="stat-value">{{ passed_count }} <span class="fs-sm fw-600 text-muted">/ {{ total_attempts }}</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="d-grid gap-5 mb-5" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-chart-pie text-primary me-2"></i>{% trans "Pass / Fail Distribution" %}
+      </div>
+    </div>
+    <div class="card-body" style="height: 260px; display: flex; align-items: center; justify-content: center;">
+      {% if total_attempts > 0 %}
+        <canvas id="passFailChart"></canvas>
+      {% else %}
+        <div class="text-center text-muted fs-sm">{% trans "No test data to display." %}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-chart-bar text-primary me-2"></i>{% trans "Performance Overview" %}
+      </div>
+    </div>
+    <div class="card-body" style="height: 260px; display: flex; align-items: center; justify-content: center;">
+      {% if total_attempts > 0 %}
+        <canvas id="scoreChart"></canvas>
+      {% else %}
+        <div class="text-center text-muted fs-sm">{% trans "No test data to display." %}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if not is_student_view and quiz_performance %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="fas fa-table-list text-primary me-2"></i>{% trans "Quiz Performance Breakdown" %}
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>{% trans "Quiz Title" %}</th>
+            <th>{% trans "Total Attempts" %}</th>
+            <th>{% trans "Average Score" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for quiz in quiz_performance %}
+          <tr>
+            <td class="fw-600">{{ quiz.title }}</td>
+            <td><span class="badge badge-primary">{{ quiz.attempt_count }}</span></td>
+            <td class="fw-700">{{ quiz.avg_percentage|floatformat:2 }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if total_attempts > 0 %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Pass/Fail Doughnut
+  const passFailEl = document.getElementById('passFailChart');
+  if (passFailEl) {
+    new Chart(passFailEl.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['{% trans "Passed" %}', '{% trans "Failed" %}'],
+        datasets: [{
+          data: [{{ passed_count }}, {{ failed_count }}],
+          backgroundColor: ['hsl(142, 76%, 36%)', 'hsl(0, 72%, 51%)'],
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  }
+
+  // Score Bar Chart
+  const scoreEl = document.getElementById('scoreChart');
+  if (scoreEl) {
+    new Chart(scoreEl.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['{% trans "Average Score" %}', '{% trans "Best Score" %}'],
+        datasets: [{
+          label: '%',
+          data: [{{ avg_score }}, {{ best_score }}],
+          backgroundColor: ['hsl(217, 89%, 42%)', 'hsl(38, 92%, 50%)'],
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { callback: v => v + '%' }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Quizzes" %} — {% trans "Student Management System" %}{% endblock %}
+{% block page_title %}{% trans "Quizzes" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between items-center flex-wrap gap-2 mb-5">
+  <div>
+    <h1 class="fs-xl fw-700">
+      {% if is_student_view %}{% trans "Available Quizzes" %}{% else %}{% trans "Quiz Management" %}{% endif %}
+    </h1>
+    <div class="text-muted fs-sm">
+      {% if is_student_view %}{% trans "Select a quiz to test your knowledge" %}{% else %}{% trans "Create, manage and configure quizzes" %}{% endif %}
+    </div>
+  </div>
+  {% if not is_student_view %}
+  <div>
+    <a href="{% url 'quiz_create' %}" class="btn btn-primary btn-sm">
+      <i class="fas fa-plus-circle me-1"></i>{% trans "Create Quiz" %}
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% if quizzes %}
+  <div class="d-grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+    {% for quiz in quizzes %}
+    <div class="card d-flex flex-column">
+      <div class="card-header justify-between">
+        <span class="fw-700 fs-base">{{ quiz.title }}</span>
+        {% if quiz.is_active %}
+          <span class="badge badge-success">{% trans "Active" %}</span>
+        {% else %}
+          <span class="badge badge-muted">{% trans "Inactive" %}</span>
+        {% endif %}
+      </div>
+      <div class="card-body flex-1">
+        <p class="text-muted fs-sm mb-4">{{ quiz.description|default:"—"|truncatewords:20 }}</p>
+
+        <div class="d-grid gap-2 mb-3" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="p-2 rounded text-center" style="background: var(--clr-surface-2);">
+            <div class="fs-sm fw-700">{{ quiz.questions.count }} / {{ quiz.total_questions }}</div>
+            <div class="fs-xs text-muted">{% trans "Questions" %}</div>
+          </div>
+          <div class="p-2 rounded text-center" style="background: var(--clr-surface-2);">
+            <div class="fs-sm fw-700">{{ quiz.get_total_marks }}</div>
+            <div class="fs-xs text-muted">{% trans "Marks" %}</div>
+          </div>
+          <div class="p-2 rounded text-center" style="background: var(--clr-surface-2);">
+            <div class="fs-sm fw-700">{{ quiz.passing_percentage }}%</div>
+            <div class="fs-xs text-muted">{% trans "Pass %" %}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        {% if is_student_view %}
+          {% if quiz.id in taken_ids %}
+            <a href="{% url 'quiz_take' quiz.pk %}" class="btn btn-outline btn-sm w-100 justify-center">
+              <i class="fas fa-redo me-1"></i>{% trans "Retake Quiz" %}
+            </a>
+          {% else %}
+            <a href="{% url 'quiz_take' quiz.pk %}" class="btn btn-primary btn-sm w-100 justify-center">
+              <i class="fas fa-play me-1"></i>{% trans "Start Quiz" %}
+            </a>
+          {% endif %}
+        {% else %}
+          <a href="{% url 'quiz_questions' quiz.pk %}" class="btn btn-outline btn-sm flex-1">
+            <i class="fas fa-list-ol me-1"></i>{% trans "Questions" %}
+          </a>
+          <a href="{% url 'quiz_edit' quiz.pk %}" class="btn btn-ghost btn-sm">
+            <i class="fas fa-edit"></i>
+          </a>
+          <a href="{% url 'quiz_delete' quiz.pk %}" class="btn btn-ghost btn-sm text-danger">
+            <i class="fas fa-trash"></i>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if not is_student_view and quizzes.has_other_pages %}
+    <div class="pagination mt-5 justify-center">
+      {% if quizzes.has_previous %}
+        <a class="page-link" href="?page=1">&laquo;</a>
+        <a class="page-link" href="?page={{ quizzes.previous_page_number }}">&lsaquo;</a>
+      {% endif %}
+
+      {% for num in quizzes.paginator.page_range %}
+        <a class="page-link {% if quizzes.number == num %}active{% endif %}" href="?page={{ num }}">{{ num }}</a>
+      {% endfor %}
+
+      {% if quizzes.has_next %}
+        <a class="page-link" href="?page={{ quizzes.next_page_number }}">&rsaquo;</a>
+        <a class="page-link" href="?page={{ quizzes.paginator.num_pages }}">&raquo;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-question-circle"></i></div>
+      <div class="empty-title">{% trans "No quizzes available." %}</div>
+      {% if not is_student_view %}
+        <a href="{% url 'quiz_create' %}" class="btn btn-primary btn-sm mt-3">
+          <i class="fas fa-plus-circle me-1"></i>{% trans "Create First Quiz" %}
+        </a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

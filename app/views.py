@@ -1,0 +1,1264 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib import messages
+from django.db import transaction
+from django.db.models import Q, Count, Avg, Sum, Max, Case, When, Value, IntegerField, F, ExpressionWrapper, DecimalField
+from django.utils.translation import gettext_lazy as _
+from django.http import HttpResponse, JsonResponse, Http404
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.hashers import make_password
+from datetime import datetime, timedelta
+import csv
+import io
+from decimal import Decimal
+import json
+
+from .models import Student, Attendance, Fee, Quiz, Question, QuizResult, StudentAnswer, Progress
+from .forms import (
+    LoginForm, StudentForm, AttendanceForm, BulkAttendanceForm,
+    FeeForm, QuizForm, QuestionForm, CSVImportForm, StudentUserForm
+)
+from .utils import (
+    generate_pdf_receipt, generate_pdf_attendance, generate_excel_report,
+    generate_pdf_result, calculate_attendance_percentage,
+    calculate_student_performance, get_formatted_time
+)
+
+
+from django.utils import translation
+from django.conf import settings
+
+
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
+def change_language(request):
+    """
+    Bulletproof language switcher view that properly redirects between English and Gujarati
+    and removes/adds the language URL prefix accurately.
+    """
+    lang = request.POST.get('language') or request.GET.get('language', 'en')
+    if lang not in ('en', 'gu'):
+        lang = 'en'
+
+    translation.activate(lang)
+
+    # Get raw next path
+    next_url = request.POST.get('next') or request.GET.get('next') or '/'
+
+    # Strip any existing /gu/ or /en/ prefix
+    path = next_url
+    if path.startswith('/gu/'):
+        path = path[3:]
+    elif path == '/gu':
+        path = '/'
+    elif path.startswith('/en/'):
+        path = path[3:]
+    elif path == '/en':
+        path = '/'
+
+    if not path.startswith('/'):
+        path = '/' + path
+
+    # If switching to Gujarati, prepend /gu
+    if lang == 'gu':
+        target_url = f'/gu{path}' if path != '/' else '/gu/'
+    else:
+        target_url = path
+
+    response = redirect(target_url)
+    response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang)
+    if hasattr(request, 'session'):
+        request.session['_language'] = lang
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+def get_student_for_user(user):
+    """Return the Student linked to this user, or None if not a student."""
+    try:
+        return user.student
+    except (Student.DoesNotExist, AttributeError):
+        return None
+
+
+def is_student_user(user):
+    return get_student_for_user(user) is not None
+
+
+# ---------------------------------------------------------------------------
+# Authentication views
+# ---------------------------------------------------------------------------
+
+def login_view(request):
+    if request.user.is_authenticated:
+        student = get_student_for_user(request.user)
+        if student:
+            return redirect('student_dashboard')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = LoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username'].strip()
+            password = form.cleaned_data['password']
+            user = authenticate(request, username=username, password=password)
+            if user is None and username.lower() != 'admin':
+                # If student entered lowercase student ID, authenticate against uppercase
+                user = authenticate(request, username=username.upper(), password=password)
+            if user is not None:
+                if not user.is_active:
+                    messages.error(request, _('Your account is inactive. Contact admin.'))
+                    return render(request, 'login.html', {'form': form})
+                login(request, user)
+                # 10 Hours session expiry (36,000 seconds)
+                request.session.set_expiry(10 * 60 * 60)
+                messages.success(request, _('Login successful!'))
+                student = get_student_for_user(user)
+                if student:
+                    return redirect('student_dashboard')
+                return redirect('dashboard')
+            else:
+                messages.error(request, _('Invalid credentials. Please try again.'))
+    else:
+        form = LoginForm()
+
+    return render(request, 'login.html', {'form': form})
+
+
+def logout_view(request):
+    logout(request)
+    messages.success(request, _('Logged out successfully.'))
+    return redirect('login')
+
+
+# ---------------------------------------------------------------------------
+# Admin dashboard (staff/superuser only)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def dashboard(request):
+    # If logged-in user is a student, redirect to student dashboard
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    total_students = Student.objects.count()
+    active_students = Student.objects.filter(status='active').count()
+    pending_fees = Fee.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+    collected_fees = Fee.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+
+    today = timezone.now().date()
+    today_attendance = Attendance.objects.filter(date=today).aggregate(
+        present=Count(Case(When(status='present', then=1))),
+        absent=Count(Case(When(status='absent', then=1))),
+        leave=Count(Case(When(status='leave', then=1)))
+    )
+
+    quiz_results = QuizResult.objects.all()
+    avg_score = quiz_results.aggregate(avg=Avg('percentage'))['avg'] or 0
+
+    context = {
+        'total_students': total_students,
+        'active_students': active_students,
+        'pending_fees': pending_fees,
+        'collected_fees': collected_fees,
+        'today_attendance': today_attendance,
+        'avg_score': round(avg_score, 2),
+        'recent_results': QuizResult.objects.select_related('student', 'quiz').order_by('-taken_date')[:5],
+        'is_admin_view': True,
+    }
+    return render(request, 'dashboard.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Student dashboard (student users only)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def student_dashboard(request):
+    student = get_student_for_user(request.user)
+    if not student:
+        messages.error(request, _('Access denied.'))
+        return redirect('dashboard')
+
+    # Real data only — all filtered by authenticated student
+    attendance_pct = calculate_attendance_percentage(student)
+    attendance_today = Attendance.objects.filter(student=student, date=timezone.now().date()).first()
+
+    quiz_results = QuizResult.objects.filter(student=student).select_related('quiz').order_by('-taken_date')
+    total_tests = quiz_results.count()
+    avg_score = quiz_results.aggregate(avg=Avg('percentage'))['avg'] or 0
+    best_score = quiz_results.aggregate(best=Max('percentage'))['best'] or 0
+
+    fees = Fee.objects.filter(student=student)
+    paid_fees = fees.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    pending_fees = fees.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+    available_quizzes = Quiz.objects.filter(is_active=True).order_by('-created_at')[:5]
+
+    # Monthly attendance breakdown (last 30 days)
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    recent_attendance = Attendance.objects.filter(
+        student=student, date__gte=thirty_days_ago
+    ).order_by('-date')[:10]
+
+    context = {
+        'student': student,
+        'attendance_pct': attendance_pct,
+        'attendance_today': attendance_today,
+        'total_tests': total_tests,
+        'avg_score': round(float(avg_score), 2),
+        'best_score': round(float(best_score), 2),
+        'paid_fees': paid_fees,
+        'pending_fees': pending_fees,
+        'recent_results': quiz_results[:5],
+        'available_quizzes': available_quizzes,
+        'recent_attendance': recent_attendance,
+        'is_student_view': True,
+    }
+    return render(request, 'student_dashboard.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Student management (admin only)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def student_list(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    students = Student.objects.select_related('user').all()
+
+    search_query = request.GET.get('search', '')
+    if search_query:
+        students = students.filter(
+            Q(name__icontains=search_query) | Q(student_id__icontains=search_query)
+        )
+
+    class_filter = request.GET.get('class', '')
+    if class_filter:
+        students = students.filter(class_field=class_filter)
+
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        students = students.filter(status=status_filter)
+
+    paginator = Paginator(students, 25)
+    page_number = request.GET.get('page')
+    students_page = paginator.get_page(page_number)
+
+    context = {
+        'students': students_page,
+        'search_query': search_query,
+        'class_filter': class_filter,
+        'status_filter': status_filter,
+    }
+    return render(request, 'students/list.html', context)
+
+
+@login_required(login_url='login')
+def student_detail(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    student = get_object_or_404(Student, pk=pk)
+
+    attendance_records = Attendance.objects.filter(student=student).order_by('-date')
+    attendance_pct = calculate_attendance_percentage(student)
+
+    fees = Fee.objects.filter(student=student)
+    paid_fees = fees.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    pending_fees = fees.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+    quiz_results = QuizResult.objects.filter(student=student).select_related('quiz').order_by('-taken_date')[:5]
+
+    try:
+        progress = student.progress
+    except Progress.DoesNotExist:
+        progress = Progress.objects.create(student=student)
+
+    context = {
+        'student': student,
+        'attendance_records': attendance_records[:10],
+        'attendance_percentage': attendance_pct,
+        'paid_fees': paid_fees,
+        'pending_fees': pending_fees,
+        'quiz_results': quiz_results,
+        'progress': progress,
+    }
+    return render(request, 'students/detail.html', context)
+
+
+@login_required(login_url='login')
+def student_create(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    if request.method == 'POST':
+        form = StudentForm(request.POST, request.FILES)
+        user_form = StudentUserForm(request.POST)
+        if form.is_valid() and user_form.is_valid():
+            with transaction.atomic():
+                # Create Django User for student
+                student_id = form.cleaned_data['student_id']
+                password = user_form.cleaned_data['password']
+
+                # Use student_id as Django username
+                if User.objects.filter(username=student_id).exists():
+                    messages.error(request, _('A user with this Student ID already exists.'))
+                    return render(request, 'students/form.html', {
+                        'form': form, 'user_form': user_form, 'title': _('Add Student')
+                    })
+
+                django_user = User.objects.create_user(
+                    username=student_id,
+                    password=password,
+                    first_name=form.cleaned_data['name'],
+                    email=form.cleaned_data.get('email') or '',
+                )
+
+                student = form.save(commit=False)
+                student.user = django_user
+                student.save()
+                Progress.objects.create(student=student)
+
+            messages.success(request, _('Student added successfully.'))
+            return redirect('student_detail', pk=student.pk)
+    else:
+        form = StudentForm()
+        user_form = StudentUserForm()
+
+    return render(request, 'students/form.html', {
+        'form': form,
+        'user_form': user_form,
+        'title': _('Add Student'),
+    })
+
+
+@login_required(login_url='login')
+def student_edit(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    student = get_object_or_404(Student, pk=pk)
+
+    if request.method == 'POST':
+        form = StudentForm(request.POST, request.FILES, instance=student)
+        if form.is_valid():
+            with transaction.atomic():
+                student = form.save()
+                # Sync name/email to linked User
+                if student.user:
+                    student.user.first_name = student.name
+                    student.user.email = student.email or ''
+                    student.user.save()
+            messages.success(request, _('Student updated successfully.'))
+            return redirect('student_detail', pk=student.pk)
+    else:
+        form = StudentForm(instance=student)
+
+    return render(request, 'students/form.html', {
+        'form': form,
+        'title': _('Edit Student'),
+        'student': student,
+    })
+
+
+@login_required(login_url='login')
+def student_reset_password(request, pk):
+    """Allow admin to reset a student's login password."""
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    student = get_object_or_404(Student, pk=pk)
+
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password', '').strip()
+        if len(new_password) < 6:
+            messages.error(request, _('Password must be at least 6 characters.'))
+            return redirect('student_detail', pk=pk)
+
+        with transaction.atomic():
+            if student.user:
+                student.user.set_password(new_password)
+                student.user.save()
+            else:
+                # Create user if it doesn't exist
+                django_user = User.objects.create_user(
+                    username=student.student_id,
+                    password=new_password,
+                    first_name=student.name,
+                    email=student.email or '',
+                )
+                student.user = django_user
+                student.save()
+
+        messages.success(request, _('Password reset successfully.'))
+        return redirect('student_detail', pk=pk)
+
+    return render(request, 'students/reset_password.html', {'student': student})
+
+
+@login_required(login_url='login')
+def student_delete(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    student = get_object_or_404(Student, pk=pk)
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            if student.user:
+                student.user.delete()  # Cascade-deletes student via SET_NULL will set null
+            student.delete()
+        messages.success(request, _('Student deleted successfully.'))
+        return redirect('student_list')
+
+    return render(request, 'students/confirm_delete.html', {'student': student})
+
+
+@login_required(login_url='login')
+def student_csv_import(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    if request.method == 'POST':
+        form = CSVImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            csv_file = request.FILES['csv_file']
+            try:
+                # Fix Bug 8: read once, use StringIO for csv.DictReader
+                raw_content = csv_file.read().decode('utf-8')
+                reader = csv.DictReader(io.StringIO(raw_content))
+
+                created_count = 0
+                errors = []
+
+                for row in reader:
+                    try:
+                        stu_id = row['student_id'].strip().upper()
+                        if Student.objects.filter(student_id=stu_id).exists():
+                            errors.append(f"{stu_id}: {_('Duplicate student ID')}")
+                            continue
+
+                        student = Student(
+                            student_id=stu_id,
+                            name=row['name'],
+                            parent_name=row['parent_name'],
+                            parent_mobile=row['parent_mobile'],
+                            email=row.get('email', ''),
+                            phone=row['phone'],
+                            class_field=row['class_field'],
+                            address=row['address'],
+                            joining_date=row['joining_date'],
+                        )
+                        student.full_clean()
+                        student.save()
+                        Progress.objects.create(student=student)
+                        created_count += 1
+                    except Exception as e:
+                        errors.append(f"Row {reader.line_num}: {str(e)}")
+
+                if created_count > 0:
+                    messages.success(request, f'{created_count} {_("students imported successfully.")}')
+
+                for error in errors:
+                    messages.warning(request, error)
+
+                return redirect('student_list')
+
+            except Exception as e:
+                messages.error(request, f'{_("Error reading file:")} {str(e)}')
+    else:
+        form = CSVImportForm()
+
+    return render(request, 'students/csv_import.html', {'form': form})
+
+
+# ---------------------------------------------------------------------------
+# Attendance
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def attendance_list(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    today = timezone.now().date()
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
+    date_str = request.GET.get('date', '').strip()
+
+    # Determine start_date and end_date
+    if start_date_str:
+        try:
+            start_date_obj = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            start_date_obj = today
+    elif date_str:
+        try:
+            start_date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            start_date_obj = today
+    else:
+        start_date_obj = today
+
+    if end_date_str:
+        try:
+            end_date_obj = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            end_date_obj = start_date_obj
+    else:
+        end_date_obj = start_date_obj
+
+    search_query = request.GET.get('search', '').strip()
+    class_filter = request.GET.get('class', '').strip()
+
+    students = Student.objects.filter(status='active')
+
+    if search_query:
+        students = students.filter(
+            Q(name__icontains=search_query) | Q(student_id__icontains=search_query)
+        )
+
+    if class_filter:
+        students = students.filter(class_field=class_filter)
+
+    # For daily attendance marking, use start_date_obj
+    attendance_records = Attendance.objects.filter(date=start_date_obj).select_related('student')
+
+    attendance_data = []
+    for student in students:
+        record = attendance_records.filter(student=student).first()
+        attendance_data.append({
+            'student': student,
+            'record': record,
+            'status': record.status if record else 'absent',
+            'remarks': record.remarks if record else '',
+        })
+
+    context = {
+        'attendance_data': attendance_data,
+        'start_date': start_date_obj.strftime('%Y-%m-%d'),
+        'end_date': end_date_obj.strftime('%Y-%m-%d'),
+        'date_filter': start_date_obj.strftime('%Y-%m-%d'),
+        'date_filter_display': start_date_obj.strftime('%d-%m-%Y'),
+        'search_query': search_query,
+        'class_filter': class_filter,
+    }
+    return render(request, 'attendance/list.html', context)
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def attendance_save(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    date_str = request.POST.get('date')
+
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        messages.error(request, _('Invalid date.'))
+        return redirect('attendance_list')
+
+    # Get student IDs posted in the form
+    posted_student_ids = []
+    for key in request.POST.keys():
+        if key.startswith('status_'):
+            try:
+                posted_student_ids.append(int(key.split('_')[1]))
+            except (ValueError, IndexError):
+                pass
+
+    students = Student.objects.filter(id__in=posted_student_ids)
+
+    try:
+        with transaction.atomic():
+            for student in students:
+                status = request.POST.get(f'status_{student.id}', 'absent')
+                remarks = request.POST.get(f'remarks_{student.id}', '')
+
+                # Validate status
+                if status not in ('present', 'absent', 'leave'):
+                    status = 'absent'
+
+                Attendance.objects.update_or_create(
+                    student=student,
+                    date=date_obj,
+                    defaults={'status': status, 'remarks': remarks}
+                )
+
+        messages.success(request, _('Attendance saved successfully.'))
+    except Exception as e:
+        messages.error(request, f'{_("Error saving attendance:")} {str(e)}')
+
+    from django.urls import reverse
+    # Preserve filter params on redirect
+    redirect_url = f"{reverse('attendance_list')}?start_date={date_obj}"
+    end_date = request.POST.get('end_date', '').strip()
+    class_filter = request.POST.get('class_filter', '').strip()
+    search_query = request.POST.get('search_query', '').strip()
+    if end_date:
+        redirect_url += f"&end_date={end_date}"
+    if class_filter:
+        redirect_url += f"&class={class_filter}"
+    if search_query:
+        redirect_url += f"&search={search_query}"
+
+    return redirect(redirect_url)
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def attendance_bulk_action(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    date_str = request.POST.get('date')
+    action = request.POST.get('action', 'present')
+
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        messages.error(request, _('Invalid date.'))
+        return redirect('attendance_list')
+
+    if action not in ('present', 'absent', 'leave'):
+        action = 'absent'
+
+    # Respect class / search filter if posted
+    class_filter = request.POST.get('class_filter', '').strip()
+    search_query = request.POST.get('search_query', '').strip()
+
+    students = Student.objects.filter(status='active')
+    if class_filter:
+        students = students.filter(class_field=class_filter)
+    if search_query:
+        students = students.filter(
+            Q(name__icontains=search_query) | Q(student_id__icontains=search_query)
+        )
+
+    with transaction.atomic():
+        for student in students:
+            Attendance.objects.update_or_create(
+                student=student,
+                date=date_obj,
+                defaults={'status': action, 'remarks': ''}
+            )
+
+    action_labels = {
+        'present': _('Present'),
+        'absent': _('Absent'),
+        'leave': _('Leave'),
+    }
+    messages.success(request, f'{_("All students marked as")} {action_labels.get(action, action)}.')
+    from django.urls import reverse
+    return redirect(f"{reverse('attendance_list')}?start_date={date_obj}")
+
+
+@login_required(login_url='login')
+def attendance_pdf_export(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    today = timezone.now().date()
+    start_date_str = request.GET.get('start_date') or request.GET.get('date') or today.strftime('%Y-%m-%d')
+    end_date_str = request.GET.get('end_date') or start_date_str
+
+    try:
+        start_date_obj = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        start_date_obj = today
+
+    try:
+        end_date_obj = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        end_date_obj = start_date_obj
+
+    if start_date_obj > end_date_obj:
+        start_date_obj, end_date_obj = end_date_obj, start_date_obj
+
+    class_filter = request.GET.get('class', '').strip()
+    search_query = request.GET.get('search', '').strip()
+
+    attendance_records = Attendance.objects.filter(
+        date__gte=start_date_obj, date__lte=end_date_obj
+    ).select_related('student').order_by('date', 'student__class_field', 'student__name')
+
+    if class_filter:
+        attendance_records = attendance_records.filter(student__class_field=class_filter)
+    if search_query:
+        attendance_records = attendance_records.filter(
+            Q(student__name__icontains=search_query) | Q(student__student_id__icontains=search_query)
+        )
+
+    return generate_pdf_attendance(attendance_records, start_date_obj, end_date_obj)
+
+
+@login_required(login_url='login')
+def attendance_excel_export(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    today = timezone.now().date()
+    start_date_str = request.GET.get('start_date') or request.GET.get('date') or today.strftime('%Y-%m-%d')
+    end_date_str = request.GET.get('end_date') or start_date_str
+
+    try:
+        start_date_obj = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        start_date_obj = today
+
+    try:
+        end_date_obj = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        end_date_obj = start_date_obj
+
+    if start_date_obj > end_date_obj:
+        start_date_obj, end_date_obj = end_date_obj, start_date_obj
+
+    class_filter = request.GET.get('class', '').strip()
+    search_query = request.GET.get('search', '').strip()
+
+    attendance_records = Attendance.objects.filter(
+        date__gte=start_date_obj, date__lte=end_date_obj
+    ).select_related('student').order_by('date', 'student__class_field', 'student__name')
+
+    if class_filter:
+        attendance_records = attendance_records.filter(student__class_field=class_filter)
+    if search_query:
+        attendance_records = attendance_records.filter(
+            Q(student__name__icontains=search_query) | Q(student__student_id__icontains=search_query)
+        )
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    if start_date_obj == end_date_obj:
+        filename = f"attendance_{start_date_obj}"
+    else:
+        filename = f"attendance_{start_date_obj}_to_{end_date_obj}"
+
+    if class_filter:
+        filename += f"_grade_{class_filter}"
+    response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
+    return generate_excel_report('attendance', attendance_records, start_date_obj, response, end_date=end_date_obj)
+
+
+# ---------------------------------------------------------------------------
+# Fees (admin only)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def fee_list(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    fees = Fee.objects.select_related('student')
+
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        fees = fees.filter(status=status_filter)
+
+    search_query = request.GET.get('search', '')
+    if search_query:
+        fees = fees.filter(student__name__icontains=search_query)
+
+    paginator = Paginator(fees, 25)
+    page_number = request.GET.get('page')
+    fees_page = paginator.get_page(page_number)
+
+    total_paid = Fee.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    total_pending = Fee.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+    context = {
+        'fees': fees_page,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'total_paid': total_paid,
+        'total_pending': total_pending,
+    }
+    return render(request, 'fees/list.html', context)
+
+
+@login_required(login_url='login')
+def fee_create(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    if request.method == 'POST':
+        form = FeeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('Fee added successfully.'))
+            return redirect('fee_list')
+    else:
+        form = FeeForm()
+
+    return render(request, 'fees/form.html', {'form': form, 'title': _('Add Fee')})
+
+
+@login_required(login_url='login')
+def fee_edit(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    fee = get_object_or_404(Fee, pk=pk)
+
+    if request.method == 'POST':
+        form = FeeForm(request.POST, instance=fee)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('Fee updated successfully.'))
+            return redirect('fee_list')
+    else:
+        form = FeeForm(instance=fee)
+
+    return render(request, 'fees/form.html', {'form': form, 'title': _('Edit Fee')})
+
+
+@login_required(login_url='login')
+def fee_delete(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    fee = get_object_or_404(Fee, pk=pk)
+
+    if request.method == 'POST':
+        fee.delete()
+        messages.success(request, _('Fee deleted successfully.'))
+        return redirect('fee_list')
+
+    return render(request, 'fees/confirm_delete.html', {'fee': fee})
+
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def fee_mark_paid(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    fee = get_object_or_404(Fee, pk=pk)
+    fee.status = 'paid'
+    fee.payment_date = timezone.now().date()
+    fee.save()
+    messages.success(request, _('Fee marked as paid.'))
+    return redirect('fee_list')
+
+
+@login_required(login_url='login')
+def fee_pdf_receipt(request, pk):
+    fee = get_object_or_404(Fee, pk=pk)
+    # Students can only view their own fee receipts
+    if is_student_user(request.user):
+        student = get_student_for_user(request.user)
+        if fee.student != student:
+            raise Http404
+    return generate_pdf_receipt(fee)
+
+
+# ---------------------------------------------------------------------------
+# Quiz management (admin CRUD)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def quiz_list(request):
+    quizzes = Quiz.objects.annotate(
+        question_count=Count('questions'),
+        attempt_count=Count('results'),
+    ).order_by('-created_at')
+
+    is_student = is_student_user(request.user)
+
+    # Students see only active quizzes they haven't taken (or can retake)
+    if is_student:
+        student = get_student_for_user(request.user)
+        taken_ids = QuizResult.objects.filter(student=student).values_list('quiz_id', flat=True)
+        quizzes = quizzes.filter(is_active=True)
+        context = {
+            'quizzes': quizzes,
+            'taken_ids': list(taken_ids),
+            'is_student_view': True,
+        }
+    else:
+        paginator = Paginator(quizzes, 10)
+        page_number = request.GET.get('page')
+        quizzes_page = paginator.get_page(page_number)
+        context = {'quizzes': quizzes_page}
+
+    return render(request, 'quiz/list.html', context)
+
+
+@login_required(login_url='login')
+def quiz_create(request):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    if request.method == 'POST':
+        form = QuizForm(request.POST)
+        if form.is_valid():
+            quiz = form.save()
+            messages.success(request, _('Quiz created successfully.'))
+            return redirect('quiz_questions', pk=quiz.pk)
+    else:
+        form = QuizForm()
+
+    return render(request, 'quiz/form.html', {'form': form, 'title': _('Create Quiz')})
+
+
+@login_required(login_url='login')
+def quiz_edit(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    quiz = get_object_or_404(Quiz, pk=pk)
+
+    if request.method == 'POST':
+        form = QuizForm(request.POST, instance=quiz)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('Quiz updated successfully.'))
+            return redirect('quiz_questions', pk=quiz.pk)
+    else:
+        form = QuizForm(instance=quiz)
+
+    return render(request, 'quiz/form.html', {'form': form, 'title': _('Edit Quiz')})
+
+
+@login_required(login_url='login')
+def quiz_delete(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    quiz = get_object_or_404(Quiz, pk=pk)
+
+    if request.method == 'POST':
+        quiz.delete()
+        messages.success(request, _('Quiz deleted successfully.'))
+        return redirect('quiz_list')
+
+    return render(request, 'quiz/confirm_delete.html', {'quiz': quiz})
+
+
+@login_required(login_url='login')
+def quiz_questions(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    quiz = get_object_or_404(Quiz, pk=pk)
+    questions = Question.objects.filter(quiz=quiz)
+
+    context = {
+        'quiz': quiz,
+        'questions': questions,
+        'question_count': questions.count(),
+    }
+    return render(request, 'quiz/questions.html', context)
+
+
+@login_required(login_url='login')
+def question_create(request, quiz_pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    quiz = get_object_or_404(Quiz, pk=quiz_pk)
+
+    if request.method == 'POST':
+        form = QuestionForm(request.POST)
+        if form.is_valid():
+            question = form.save(commit=False)
+            question.quiz = quiz
+            question.save()
+            messages.success(request, _('Question added successfully.'))
+            return redirect('quiz_questions', pk=quiz.pk)
+    else:
+        form = QuestionForm()
+
+    question_count = Question.objects.filter(quiz=quiz).count()
+    return render(request, 'quiz/question_form.html', {
+        'form': form, 'quiz': quiz,
+        'question_count': question_count,
+        'title': _('Add Question'),
+    })
+
+
+@login_required(login_url='login')
+def question_edit(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    question = get_object_or_404(Question, pk=pk)
+
+    if request.method == 'POST':
+        form = QuestionForm(request.POST, instance=question)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _('Question updated successfully.'))
+            return redirect('quiz_questions', pk=question.quiz.pk)
+    else:
+        form = QuestionForm(instance=question)
+
+    return render(request, 'quiz/question_form.html', {
+        'form': form, 'quiz': question.quiz, 'title': _('Edit Question')
+    })
+
+
+@login_required(login_url='login')
+def question_delete(request, pk):
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    question = get_object_or_404(Question, pk=pk)
+    quiz_pk = question.quiz.pk
+
+    if request.method == 'POST':
+        question.delete()
+        messages.success(request, _('Question deleted successfully.'))
+        return redirect('quiz_questions', pk=quiz_pk)
+
+    return render(request, 'quiz/question_confirm_delete.html', {'question': question})
+
+
+# ---------------------------------------------------------------------------
+# Quiz taking (student only)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def quiz_take(request, pk):
+    # Only students can take quizzes
+    student = get_student_for_user(request.user)
+    if not student:
+        messages.error(request, _('Only students can take quizzes.'))
+        return redirect('quiz_list')
+
+    if student.status != 'active':
+        messages.error(request, _('Your account is inactive.'))
+        return redirect('student_dashboard')
+
+    quiz = get_object_or_404(Quiz, pk=pk, is_active=True)
+    questions = Question.objects.filter(quiz=quiz).order_by('id')
+
+    if questions.count() == 0:
+        messages.error(request, _('This quiz has no questions yet.'))
+        return redirect('quiz_list')
+
+    if request.method == 'POST':
+        # Prevent duplicate submission using session token
+        submission_token = request.POST.get('submission_token')
+        session_token_key = f'quiz_{quiz.pk}_token'
+
+        if session_token_key in request.session:
+            if request.session[session_token_key] == submission_token:
+                # Token matches — valid first submission, clear it
+                del request.session[session_token_key]
+            else:
+                # Token mismatch or already used — duplicate submission
+                messages.warning(request, _('Quiz already submitted.'))
+                return redirect('student_dashboard')
+        else:
+            messages.warning(request, _('Invalid submission. Please start the quiz again.'))
+            return redirect('quiz_list')
+
+        with transaction.atomic():
+            quiz_result = QuizResult.objects.create(
+                student=student,
+                quiz=quiz,
+                time_taken=max(0, int(request.POST.get('time_taken', 0))),
+            )
+
+            correct_count = 0
+            wrong_count = 0
+            unanswered_count = 0
+
+            for question in questions:
+                selected_option = request.POST.get(f'question_{question.id}', 'unanswered')
+                if selected_option not in ('A', 'B', 'C', 'D'):
+                    selected_option = 'unanswered'
+
+                # Server-side scoring: never trust client-submitted correctness
+                is_correct = (selected_option == question.correct_option)
+
+                if selected_option == 'unanswered':
+                    unanswered_count += 1
+                elif is_correct:
+                    correct_count += 1
+                else:
+                    wrong_count += 1
+
+                StudentAnswer.objects.create(
+                    quiz_result=quiz_result,
+                    question=question,
+                    selected_option=selected_option,
+                    is_correct=is_correct,
+                )
+
+            total_possible = quiz.get_total_marks()
+            quiz_result.correct_answers = correct_count
+            quiz_result.wrong_answers = wrong_count
+            quiz_result.unanswered = unanswered_count
+            quiz_result.total_marks = Decimal(correct_count) * Decimal(quiz.marks_per_question)
+            quiz_result.percentage = (
+                (quiz_result.total_marks / Decimal(total_possible)) * 100
+                if total_possible > 0 else Decimal(0)
+            )
+            quiz_result.passed = quiz_result.percentage >= quiz.passing_percentage
+            quiz_result.save()
+
+        _update_student_progress(student)
+        messages.success(request, _('Quiz submitted successfully!'))
+        return redirect('quiz_result', pk=quiz_result.pk)
+
+    # GET — show quiz; generate a one-time submission token
+    import uuid as _uuid
+    token = str(_uuid.uuid4())
+    session_token_key = f'quiz_{quiz.pk}_token'
+    request.session[session_token_key] = token
+
+    context = {
+        'quiz': quiz,
+        'questions': questions,
+        'question_count': questions.count(),
+        'submission_token': token,
+        'student': student,
+    }
+    return render(request, 'quiz/take.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Quiz results — IDOR-protected
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def quiz_result(request, pk):
+    result = get_object_or_404(QuizResult, pk=pk)
+
+    # IDOR protection: students can only view their OWN results
+    if is_student_user(request.user):
+        student = get_student_for_user(request.user)
+        if result.student != student:
+            raise Http404
+
+    student_answers = StudentAnswer.objects.filter(
+        quiz_result=result
+    ).select_related('question').order_by('question__id')
+
+    context = {
+        'quiz_result': result,
+        'student_answers': student_answers,
+        'time_taken_formatted': get_formatted_time(result.time_taken),
+        'is_student_view': is_student_user(request.user),
+    }
+    return render(request, 'quiz/result.html', context)
+
+
+@login_required(login_url='login')
+def quiz_result_pdf(request, pk):
+    result = get_object_or_404(QuizResult, pk=pk)
+
+    # IDOR protection
+    if is_student_user(request.user):
+        student = get_student_for_user(request.user)
+        if result.student != student:
+            raise Http404
+
+    return generate_pdf_result(result)
+
+
+# ---------------------------------------------------------------------------
+# Analytics
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+def analytics(request):
+    if is_student_user(request.user):
+        # Student sees their own analytics
+        student = get_student_for_user(request.user)
+        quiz_results = QuizResult.objects.filter(student=student)
+        total_attempts = quiz_results.count()
+        avg_score = quiz_results.aggregate(avg=Avg('percentage'))['avg'] or 0
+        best_score = quiz_results.aggregate(best=Max('percentage'))['best'] or 0
+        passed_count = quiz_results.filter(passed=True).count()
+        failed_count = quiz_results.filter(passed=False).count()
+        quiz_performance = []
+        context = {
+            'total_attempts': total_attempts,
+            'avg_score': round(avg_score, 2),
+            'best_score': round(best_score, 2),
+            'passed_count': passed_count,
+            'failed_count': failed_count,
+            'quiz_performance': quiz_performance,
+            'is_student_view': True,
+            'student': student,
+        }
+    else:
+        total_attempts = QuizResult.objects.count()
+        avg_score = QuizResult.objects.aggregate(avg=Avg('percentage'))['avg'] or 0
+        best_score = QuizResult.objects.aggregate(best=Max('percentage'))['best'] or 0
+        passed_count = QuizResult.objects.filter(passed=True).count()
+        failed_count = QuizResult.objects.filter(passed=False).count()
+        quiz_performance = Quiz.objects.annotate(
+            avg_percentage=Avg('results__percentage'),
+            attempt_count=Count('results')
+        ).filter(results__isnull=False)
+
+        context = {
+            'total_attempts': total_attempts,
+            'avg_score': round(avg_score, 2),
+            'best_score': round(best_score, 2),
+            'passed_count': passed_count,
+            'failed_count': failed_count,
+            'quiz_performance': quiz_performance,
+        }
+
+    return render(request, 'analytics.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _update_student_progress(student):
+    """Recalculate and persist student progress after a quiz attempt."""
+    quiz_results = QuizResult.objects.filter(student=student)
+
+    avg_score = quiz_results.aggregate(avg=Avg('percentage'))['avg'] or 0
+    # Fix Bug 9: use Max, not Avg for best_score
+    best_score = quiz_results.aggregate(best=Max('percentage'))['best'] or 0
+
+    if quiz_results.count() > 1:
+        first_result = quiz_results.order_by('taken_date').first()
+        recent_result = quiz_results.order_by('-taken_date').first()
+        if first_result.percentage > 0:
+            improvement = float(
+                (recent_result.percentage - first_result.percentage) / first_result.percentage * 100
+            )
+        else:
+            improvement = 0
+    else:
+        improvement = 0
+
+    Progress.objects.update_or_create(
+        student=student,
+        defaults={
+            'total_tests_taken': quiz_results.count(),
+            'average_score': Decimal(str(avg_score)),
+            'best_score': Decimal(str(best_score)),
+            'improvement_percentage': Decimal(str(round(improvement, 2))),
+        }
+    )
+
+
+# Keep old name for compatibility
+def update_student_progress(student):
+    _update_student_progress(student)

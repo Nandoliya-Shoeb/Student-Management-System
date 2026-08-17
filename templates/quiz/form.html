@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ title }} — {% trans "Student Management System" %}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div class="card">
+    <div class="card-header justify-between">
+      <div class="card-title">
+        <i class="fas fa-question-circle text-primary me-2"></i>{{ title }}
+      </div>
+      <a href="{% url 'quiz_list' %}" class="btn btn-ghost btn-sm">&larr; {% trans "Back" %}</a>
+    </div>
+    <div class="card-body">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label class="form-label" for="id_title">{% trans "Quiz Title" %} <span class="req">*</span></label>
+          {{ form.title }}
+          {% if form.title.errors %}<div class="form-error">{{ form.title.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_description">{% trans "Description" %}</label>
+          {{ form.description }}
+          {% if form.description.errors %}<div class="form-error">{{ form.description.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="id_total_questions">{% trans "Total Questions" %}</label>
+            {{ form.total_questions }}
+            {% if form.total_questions.errors %}<div class="form-error">{{ form.total_questions.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_marks_per_question">{% trans "Marks Per Question" %}</label>
+            {{ form.marks_per_question }}
+            {% if form.marks_per_question.errors %}<div class="form-error">{{ form.marks_per_question.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_passing_percentage">{% trans "Passing %" %}</label>
+            {{ form.passing_percentage }}
+            {% if form.passing_percentage.errors %}<div class="form-error">{{ form.passing_percentage.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="form-group mt-2">
+          <div class="form-check">
+            {{ form.is_active }}
+            <label class="form-label mb-0" for="id_is_active">{% trans "Is Active" %} ({% trans "Visible to students" %})</label>
+          </div>
+        </div>
+
+        <div class="d-flex justify-end gap-2 mt-5 pt-4 border-top">
+          <a href="{% url 'quiz_list' %}" class="btn btn-outline">{% trans "Cancel" %}</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>{% trans "Save Quiz" %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

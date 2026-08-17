@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Students Directory" %} — {% trans "Student Management System" %}{% endblock %}
+{% block page_title %}{% trans "Students" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between items-center flex-wrap gap-3 mb-4">
+  <div>
+    <h1 class="fs-xl fw-700">{% trans "Students Directory" %}</h1>
+    <div class="text-muted fs-sm">{% trans "Manage enrolled student profiles and credentials" %}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm">
+      <i class="fas fa-user-plus me-1"></i>{% trans "Add Student" %}
+    </a>
+    <a href="{% url 'student_csv_import' %}" class="btn btn-outline btn-sm">
+      <i class="fas fa-file-import me-1"></i>{% trans "Import CSV" %}
+    </a>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-4">
+  <div class="card-body p-3">
+    <form method="GET" class="d-flex flex-wrap gap-2 items-center">
+      <div style="flex: 2; min-width: 180px;">
+        <input type="text" name="search" class="form-control" placeholder="{% trans 'Search by name or Student ID...' %}" value="{{ search_query }}">
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <select name="class" class="form-select">
+          <option value="">{% trans "All Classes" %}</option>
+          <option value="5" {% if class_filter == '5' %}selected{% endif %}>{% trans "Grade 5" %}</option>
+          <option value="6" {% if class_filter == '6' %}selected{% endif %}>{% trans "Grade 6" %}</option>
+          <option value="7" {% if class_filter == '7' %}selected{% endif %}>{% trans "Grade 7" %}</option>
+          <option value="8" {% if class_filter == '8' %}selected{% endif %}>{% trans "Grade 8" %}</option>
+        </select>
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <select name="status" class="form-select">
+          <option value="">{% trans "All Status" %}</option>
+          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{% trans "Active" %}</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>{% trans "Inactive" %}</option>
+        </select>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fas fa-search me-1"></i>{% trans "Filter" %}
+        </button>
+        {% if search_query or class_filter or status_filter %}
+          <a href="{% url 'student_list' %}" class="btn btn-ghost btn-sm">{% trans "Reset" %}</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if students %}
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>{% trans "Student ID" %}</th>
+              <th>{% trans "Student Name" %}</th>
+              <th>{% trans "Class" %}</th>
+              <th>{% trans "Login Account" %}</th>
+              <th>{% trans "Contact" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th class="text-right">{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+            <tr>
+              <td class="fw-700 text-primary">{{ student.student_id }}</td>
+              <td>
+                <div class="fw-600">{{ student.name }}</div>
+                <div class="fs-xs text-muted">{{ student.email }}</div>
+              </td>
+              <td><span class="badge badge-primary">{{ student.get_class_field_display }}</span></td>
+              <td>
+                {% if student.user %}
+                  <span class="badge badge-success"><i class="fas fa-key me-1"></i>{% trans "Active Login" %}</span>
+                {% else %}
+                  <a href="{% url 'student_reset_password' student.pk %}" class="badge badge-warning" title="{% trans 'Click to set password' %}">
+                    <i class="fas fa-plus me-1"></i>{% trans "Create Password" %}
+                  </a>
+                {% endif %}
+              </td>
+              <td class="fs-xs text-muted">{{ student.phone }}</td>
+              <td>
+                {% if student.status == 'active' %}
+                  <span class="badge badge-success">{% trans "Active" %}</span>
+                {% else %}
+                  <span class="badge badge-muted">{% trans "Inactive" %}</span>
+                {% endif %}
+              </td>
+              <td class="text-right">
+                <a href="{% url 'student_detail' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'View Profile' %}">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <a href="{% url 'student_edit' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Edit' %}">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'student_reset_password' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Reset Password' %}">
+                  <i class="fas fa-key"></i>
+                </a>
+                <a href="{% url 'student_delete' student.pk %}" class="btn btn-ghost btn-sm text-danger" title="{% trans 'Delete' %}">
+                  <i class="fas fa-trash"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if students.has_other_pages %}
+    <div class="pagination mt-4 justify-center">
+      {% if students.has_previous %}
+        <a class="page-link" href="?page=1&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&laquo;</a>
+        <a class="page-link" href="?page={{ students.previous_page_number }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&lsaquo;</a>
+      {% endif %}
+
+      {% for num in students.paginator.page_range %}
+        <a class="page-link {% if students.number == num %}active{% endif %}" href="?page={{ num }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">{{ num }}</a>
+      {% endfor %}
+
+      {% if students.has_next %}
+        <a class="page-link" href="?page={{ students.next_page_number }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&rsaquo;</a>
+        <a class="page-link" href="?page={{ students.paginator.num_pages }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&raquo;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-users"></i></div>
+      <div class="empty-title">{% trans "No students found." %}</div>
+      <div class="empty-desc">{% trans "Try adjusting your search criteria or add a new student." %}</div>
+      <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm mt-3">
+        <i class="fas fa-user-plus me-1"></i>{% trans "Add Student" %}
+      </a>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

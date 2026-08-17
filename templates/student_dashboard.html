@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Student Dashboard" %} — {{ student.name }}{% endblock %}
+{% block page_title %}{% trans "My Dashboard" %}{% endblock %}
+
+{% block content %}
+<div class="welcome-banner">
+  <div class="welcome-name">{% trans "Welcome back" %}, {{ student.name }} 👋</div>
+  <div class="welcome-sub">
+    <span><i class="fas fa-id-badge me-1"></i>{{ student.student_id }}</span>
+    <span class="mx-2">•</span>
+    <span><i class="fas fa-layer-group me-1"></i>{{ student.get_class_field_display }}</span>
+    <span class="mx-2">•</span>
+    <span><i class="fas fa-calendar-alt me-1"></i>{% trans "Joined" %}: {{ student.joining_date|date:"M Y" }}</span>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <i class="fas fa-user-check"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Attendance" %}</div>
+      <div class="stat-value">{{ attendance_pct }}%</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <i class="fas fa-chart-line"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Quiz Average" %}</div>
+      <div class="stat-value">{{ avg_score }}%</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon amber">
+      <i class="fas fa-tasks"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Tests Taken" %}</div>
+      <div class="stat-value">{{ total_tests }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon cyan">
+      <i class="fas fa-trophy"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Best Score" %}</div>
+      <div class="stat-value">{{ best_score }}%</div>
+    </div>
+  </div>
+</div>
+
+<div class="d-grid gap-5" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+
+  <!-- Available Quizzes -->
+  <div class="card">
+    <div class="card-header justify-between">
+      <div class="card-title">
+        <i class="fas fa-question-circle text-primary me-2"></i>{% trans "Available Quizzes" %}
+      </div>
+      <a href="{% url 'quiz_list' %}" class="btn btn-ghost btn-sm">{% trans "View All" %} &rarr;</a>
+    </div>
+    <div class="card-body p-0">
+      {% if available_quizzes %}
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>{% trans "Quiz Title" %}</th>
+                <th>{% trans "Questions" %}</th>
+                <th>{% trans "Passing %" %}</th>
+                <th class="text-right">{% trans "Action" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for quiz in available_quizzes %}
+              <tr>
+                <td class="fw-600">{{ quiz.title }}</td>
+                <td>{{ quiz.total_questions }}</td>
+                <td><span class="badge badge-info">{{ quiz.passing_percentage }}%</span></td>
+                <td class="text-right">
+                  <a href="{% url 'quiz_take' quiz.id %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-play me-1"></i>{% trans "Start Quiz" %}
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-check-circle"></i></div>
+          <div class="empty-title">{% trans "No quizzes currently available." %}</div>
+          <div class="empty-desc">{% trans "Check back later for new tests." %}</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent Quiz Results -->
+  <div class="card">
+    <div class="card-header justify-between">
+      <div class="card-title">
+        <i class="fas fa-history text-primary me-2"></i>{% trans "My Recent Results" %}
+      </div>
+    </div>
+    <div class="card-body p-0">
+      {% if recent_results %}
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>{% trans "Quiz" %}</th>
+                <th>{% trans "Score" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Date" %}</th>
+                <th class="text-right">{% trans "Review" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for res in recent_results %}
+              <tr>
+                <td class="fw-600">{{ res.quiz.title }}</td>
+                <td>{{ res.percentage }}%</td>
+                <td>
+                  {% if res.passed %}
+                    <span class="badge badge-success">{% trans "Passed" %}</span>
+                  {% else %}
+                    <span class="badge badge-danger">{% trans "Failed" %}</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted fs-xs">{{ res.taken_date|date:"d M Y" }}</td>
+                <td class="text-right">
+                  <a href="{% url 'quiz_result' res.id %}" class="btn btn-outline btn-sm">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+          <div class="empty-title">{% trans "No quiz attempts yet." %}</div>
+          <div class="empty-desc">{% trans "Take a quiz to see your scores here." %}</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Second row: Attendance & Fees -->
+<div class="d-grid gap-5 mt-5" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+
+  <!-- Attendance History -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-calendar-alt text-primary me-2"></i>{% trans "Recent Attendance (Last 30 Days)" %}
+      </div>
+    </div>
+    <div class="card-body p-0">
+      {% if recent_attendance %}
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>{% trans "Date" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Remarks" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for att in recent_attendance %}
+              <tr>
+                <td class="fw-600">{{ att.date|date:"d M Y" }}</td>
+                <td>
+                  {% if att.status == 'present' %}
+                    <span class="badge badge-success"><i class="fas fa-check me-1"></i>{% trans "Present" %}</span>
+                  {% elif att.status == 'absent' %}
+                    <span class="badge badge-danger"><i class="fas fa-times me-1"></i>{% trans "Absent" %}</span>
+                  {% else %}
+                    <span class="badge badge-warning"><i class="fas fa-clock me-1"></i>{% trans "Leave" %}</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted fs-xs">{{ att.remarks|default:"—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-calendar-check"></i></div>
+          <div class="empty-title">{% trans "No attendance records found." %}</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Fees Summary -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-receipt text-primary me-2"></i>{% trans "Fee Summary" %}
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="d-flex justify-between items-center p-3 mb-3 rounded" style="background: var(--clr-success-light);">
+        <div>
+          <div class="fs-xs fw-600 text-muted">{% trans "Total Paid Fees" %}</div>
+          <div class="fs-lg fw-700 text-success">₹ {{ paid_fees }}</div>
+        </div>
+        <i class="fas fa-check-circle fs-xl text-success"></i>
+      </div>
+
+      <div class="d-flex justify-between items-center p-3 rounded" style="background: var(--clr-danger-light);">
+        <div>
+          <div class="fs-xs fw-600 text-muted">{% trans "Pending Dues" %}</div>
+          <div class="fs-lg fw-700 text-danger">₹ {{ pending_fees }}</div>
+        </div>
+        <i class="fas fa-exclamation-circle fs-xl text-danger"></i>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

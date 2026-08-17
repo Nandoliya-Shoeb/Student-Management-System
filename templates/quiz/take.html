@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Take Quiz" %}: {{ quiz.title }}{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+
+{% block content %}
+<form method="POST" id="quizForm">
+  {% csrf_token %}
+  <input type="hidden" name="time_taken" id="timeTaken" value="0">
+  <input type="hidden" name="submission_token" value="{{ submission_token }}">
+
+  <div class="quiz-shell">
+    <!-- Left: Question Player -->
+    <div class="quiz-card">
+      <div class="quiz-header">
+        <div>
+          <div class="fs-xs fw-700 text-muted uppercase">{% trans "Question" %} <span id="currentQNumDisplay">1</span> / {{ question_count }}</div>
+          <div class="quiz-progress-bar mt-2" style="width: 200px;">
+            <div class="quiz-progress-fill" id="progressBar" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div class="quiz-timer" id="timerBadge">
+          <i class="fas fa-clock"></i>
+          <span id="timerText">00:00</span>
+        </div>
+      </div>
+
+      <div class="question-body">
+        {% for question in questions %}
+          <div class="question-block {% if forloop.first %}active{% endif %}" id="qBlock-{{ forloop.counter }}" data-q-index="{{ forloop.counter }}" data-q-id="{{ question.id }}">
+            <div class="question-label">
+              <i class="fas fa-question-circle"></i>
+              {% trans "Question" %} {{ forloop.counter }}
+            </div>
+            <div class="question-text">{{ question.question_text }}</div>
+
+            <div class="option-list">
+              <label class="option-item" for="q{{ question.id }}_a" onclick="selectOption(this, {{ forloop.counter }})">
+                <input type="radio" name="question_{{ question.id }}" id="q{{ question.id }}_a" value="A" onchange="markAnswered({{ forloop.counter }})">
+                <span class="option-letter">A</span>
+                <span class="option-text">{{ question.option_a }}</span>
+              </label>
+
+              <label class="option-item" for="q{{ question.id }}_b" onclick="selectOption(this, {{ forloop.counter }})">
+                <input type="radio" name="question_{{ question.id }}" id="q{{ question.id }}_b" value="B" onchange="markAnswered({{ forloop.counter }})">
+                <span class="option-letter">B</span>
+                <span class="option-text">{{ question.option_b }}</span>
+              </label>
+
+              <label class="option-item" for="q{{ question.id }}_c" onclick="selectOption(this, {{ forloop.counter }})">
+                <input type="radio" name="question_{{ question.id }}" id="q{{ question.id }}_c" value="C" onchange="markAnswered({{ forloop.counter }})">
+                <span class="option-letter">C</span>
+                <span class="option-text">{{ question.option_c }}</span>
+              </label>
+
+              <label class="option-item" for="q{{ question.id }}_d" onclick="selectOption(this, {{ forloop.counter }})">
+                <input type="radio" name="question_{{ question.id }}" id="q{{ question.id }}_d" value="D" onchange="markAnswered({{ forloop.counter }})">
+                <span class="option-letter">D</span>
+                <span class="option-text">{{ question.option_d }}</span>
+              </label>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="card-footer d-flex justify-between items-center">
+        <button type="button" class="btn btn-outline" id="prevBtn" onclick="prevQuestion()" style="visibility: hidden;">
+          <i class="fas fa-arrow-left me-1"></i>{% trans "Previous" %}
+        </button>
+
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">
+            {% trans "Next" %}<i class="fas fa-arrow-right ms-1"></i>
+          </button>
+          <button type="button" class="btn btn-success" id="submitBtn" onclick="confirmSubmit()" style="display: none;">
+            <i class="fas fa-check-circle me-1"></i>{% trans "Submit Quiz" %}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Question Palette / Navigator -->
+    <div class="q-navigator">
+      <div class="q-nav-header d-flex justify-between items-center">
+        <span><i class="fas fa-th me-2"></i>{% trans "Question Palette" %}</span>
+        <span class="badge badge-primary" id="answeredCountBadge">0/{{ question_count }}</span>
+      </div>
+      <div class="q-nav-grid">
+        {% for question in questions %}
+          <button type="button" class="q-nav-btn {% if forloop.first %}current{% endif %}" id="navBtn-{{ forloop.counter }}" onclick="goToQuestion({{ forloop.counter }})">
+            {{ forloop.counter }}
+          </button>
+        {% endfor %}
+      </div>
+      <div class="p-3 border-top" style="background: var(--clr-surface-2); font-size: var(--fs-xs);">
+        <div class="d-flex items-center gap-2 mb-1">
+          <span class="q-nav-btn current" style="width:16px;height:16px;font-size:8px;"></span>
+          <span class="text-muted">{% trans "Current" %}</span>
+        </div>
+        <div class="d-flex items-center gap-2 mb-1">
+          <span class="q-nav-btn answered" style="width:16px;height:16px;font-size:8px;"></span>
+          <span class="text-muted">{% trans "Answered" %}</span>
+        </div>
+        <div class="d-flex items-center gap-2">
+          <span class="q-nav-btn" style="width:16px;height:16px;font-size:8px;"></span>
+          <span class="text-muted">{% trans "Unanswered" %}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const totalQuestions = {{ question_count }};
+let currentQuestionIndex = 1;
+let secondsElapsed = 0;
+let answeredQuestions = new Set();
+
+// Timer
+const timerBadge = document.getElementById('timerBadge');
+const timerText = document.getElementById('timerText');
+const timeTakenInput = document.getElementById('timeTaken');
+
+const timerInterval = setInterval(() => {
+  secondsElapsed++;
+  timeTakenInput.value = secondsElapsed;
+
+  const mins = Math.floor(secondsElapsed / 60);
+  const secs = secondsElapsed % 60;
+  timerText.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}, 1000);
+
+function goToQuestion(qNum) {
+  if (qNum < 1 || qNum > totalQuestions) return;
+
+  // Hide all blocks
+  document.querySelectorAll('.question-block').forEach(b => b.classList.remove('active'));
+
+  // Show target block
+  const targetBlock = document.getElementById(`qBlock-${qNum}`);
+  if (targetBlock) {
+    targetBlock.classList.add('active');
+  }
+
+  currentQuestionIndex = qNum;
+  updateUI();
+}
+
+function nextQuestion() {
+  if (currentQuestionIndex < totalQuestions) {
+    goToQuestion(currentQuestionIndex + 1);
+  }
+}
+
+function prevQuestion() {
+  if (currentQuestionIndex > 1) {
+    goToQuestion(currentQuestionIndex - 1);
+  }
+}
+
+function selectOption(labelEl, qNum) {
+  const block = document.getElementById(`qBlock-${qNum}`);
+  if (!block) return;
+
+  block.querySelectorAll('.option-item').forEach(el => el.classList.remove('selected'));
+  labelEl.classList.add('selected');
+
+  const radio = labelEl.querySelector('input[type="radio"]');
+  if (radio) {
+    radio.checked = true;
+    markAnswered(qNum);
+  }
+}
+
+function markAnswered(qNum) {
+  answeredQuestions.add(qNum);
+  const navBtn = document.getElementById(`navBtn-${qNum}`);
+  if (navBtn) {
+    navBtn.classList.add('answered');
+  }
+  document.getElementById('answeredCountBadge').textContent = `${answeredQuestions.size}/${totalQuestions}`;
+}
+
+function updateUI() {
+  // Update question index display
+  document.getElementById('currentQNumDisplay').textContent = currentQuestionIndex;
+
+  // Update progress bar
+  const pct = Math.round((currentQuestionIndex / totalQuestions) * 100);
+  document.getElementById('progressBar').style.width = `${pct}%`;
+
+  // Update Nav Buttons
+  document.querySelectorAll('.q-nav-btn').forEach((btn, idx) => {
+    btn.classList.remove('current');
+    if (idx + 1 === currentQuestionIndex) {
+      btn.classList.add('current');
+    }
+  });
+
+  // Buttons visibility
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const submitBtn = document.getElementById('submitBtn');
+
+  prevBtn.style.visibility = currentQuestionIndex > 1 ? 'visible' : 'hidden';
+
+  if (currentQuestionIndex === totalQuestions) {
+    nextBtn.style.display = 'none';
+    submitBtn.style.display = 'inline-flex';
+  } else {
+    nextBtn.style.display = 'inline-flex';
+    submitBtn.style.display = 'none';
+  }
+}
+
+function confirmSubmit() {
+  const unansweredCount = totalQuestions - answeredQuestions.size;
+  let confirmMsg = "{% trans 'Are you sure you want to submit the quiz?' %}";
+
+  if (unansweredCount > 0) {
+    confirmMsg = `{% trans 'You have' %} ${unansweredCount} {% trans 'unanswered question(s). Are you sure you want to submit?' %}`;
+  }
+
+  if (confirm(confirmMsg)) {
+    clearInterval(timerInterval);
+    const form = document.getElementById('quizForm');
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>{% trans "Submitting..." %}';
+    form.submit();
+  }
+}
+
+// Initialize
+updateUI();
+</script>
+{% endblock %}

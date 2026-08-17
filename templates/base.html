@@ -1,0 +1,180 @@
+{% load static %}
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{% trans 'Student Management System — Professional Education Platform' %}">
+  <title>{% block title %}{% trans "Student Management System" %}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link href="{% static 'css/style.css' %}" rel="stylesheet">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<!-- ─── Sidebar Overlay (mobile) ──────────────────────────── -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ─── Sidebar ──────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <a href="{% url 'dashboard' %}" class="sidebar-logo">
+    <div class="logo-icon"><i class="fas fa-graduation-cap"></i></div>
+    <div>
+      <div class="logo-text">{% trans "EduManage" %}</div>
+      <div class="logo-sub">{% trans "Student Management" %}</div>
+    </div>
+  </a>
+
+  <nav class="sidebar-nav">
+    {% if user.is_staff or not user.student %}
+    <!-- Admin navigation -->
+    <div class="sidebar-section-label">{% trans "Overview" %}</div>
+    <a href="{% url 'dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <i class="fas fa-chart-line"></i>{% trans "Dashboard" %}
+    </a>
+
+    <div class="sidebar-section-label">{% trans "Management" %}</div>
+    <a href="{% url 'student_list' %}" class="sidebar-link {% if 'student' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-users"></i>{% trans "Students" %}
+    </a>
+    <a href="{% url 'attendance_list' %}" class="sidebar-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-calendar-check"></i>{% trans "Attendance" %}
+    </a>
+    <a href="{% url 'fee_list' %}" class="sidebar-link {% if 'fee' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-money-bill-wave"></i>{% trans "Fees" %}
+    </a>
+
+    <div class="sidebar-section-label">{% trans "Academics" %}</div>
+    <a href="{% url 'quiz_list' %}" class="sidebar-link {% if 'quiz' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-question-circle"></i>{% trans "Quizzes" %}
+    </a>
+    <a href="{% url 'analytics' %}" class="sidebar-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+      <i class="fas fa-chart-bar"></i>{% trans "Analytics" %}
+    </a>
+    {% else %}
+    <!-- Student navigation -->
+    <div class="sidebar-section-label">{% trans "My Space" %}</div>
+    <a href="{% url 'student_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">
+      <i class="fas fa-home"></i>{% trans "Dashboard" %}
+    </a>
+    <a href="{% url 'quiz_list' %}" class="sidebar-link {% if 'quiz' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="fas fa-question-circle"></i>{% trans "Available Quizzes" %}
+    </a>
+    <a href="{% url 'analytics' %}" class="sidebar-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+      <i class="fas fa-chart-bar"></i>{% trans "My Analytics" %}
+    </a>
+    {% endif %}
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info-card">
+      <div class="user-avatar">{{ user.username|first|upper }}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="user-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          {% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}
+        </div>
+        <div class="user-role">
+          {% if user.is_staff %}{% trans "Administrator" %}{% else %}{% trans "Student" %}{% endif %}
+        </div>
+      </div>
+      <a href="{% url 'logout' %}" class="btn-ghost btn-icon" title="{% trans 'Logout' %}">
+        <i class="fas fa-sign-out-alt"></i>
+      </a>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── Main Area ─────────────────────────────────────────── -->
+<div class="main-area">
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="btn-ghost btn-icon" id="sidebarToggle" onclick="toggleSidebar()" title="{% trans 'Toggle sidebar' %}">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="topbar-title">{% block page_title %}{% trans "Student Management System" %}{% endblock %}</div>
+    <div class="topbar-actions">
+      <!-- Language switcher -->
+      <div class="lang-switcher">
+        <form method="post" action="{% url 'set_language' %}" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="language" value="en">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button type="submit" class="lang-btn {% if LANGUAGE_CODE == 'en' %}active{% endif %}">EN</button>
+        </form>
+        <form method="post" action="{% url 'set_language' %}" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="language" value="gu">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button type="submit" class="lang-btn {% if LANGUAGE_CODE == 'gu' %}active{% endif %}">ગુ</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast zone for Django messages -->
+  <div class="toast-zone" id="toastZone">
+    {% for message in messages %}
+    <div class="toast toast-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" role="alert">
+      <span class="toast-icon">
+        {% if message.tags == 'success' %}<i class="fas fa-check-circle"></i>
+        {% elif message.tags == 'error' or message.tags == 'danger' %}<i class="fas fa-times-circle"></i>
+        {% elif message.tags == 'warning' %}<i class="fas fa-exclamation-triangle"></i>
+        {% else %}<i class="fas fa-info-circle"></i>{% endif %}
+      </span>
+      <div class="toast-body">
+        <div class="toast-msg">{{ message }}</div>
+      </div>
+      <button onclick="dismissToast(this)" style="background:none;border:none;cursor:pointer;color:var(--clr-text-muted);padding:0;margin-left:auto;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Page content -->
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{% else %}
+<!-- Unauthenticated layout (login page etc.) -->
+<div class="unauth-shell">
+  {% block unauth_content %}{% endblock %}
+</div>
+{% endif %}
+
+<script>
+// Sidebar toggle
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.toggle('open');
+  if (o) o.classList.toggle('active');
+}
+function closeSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.remove('open');
+  if (o) o.classList.remove('active');
+}
+
+// Toast auto-dismiss
+function dismissToast(btn) {
+  const toast = btn.closest('.toast');
+  if (!toast) return;
+  toast.classList.add('hiding');
+  setTimeout(() => toast.remove(), 260);
+}
+
+document.querySelectorAll('.toast').forEach(toast => {
+  setTimeout(() => dismissToast(toast.querySelector('button')), 5000);
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

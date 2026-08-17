@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Attendance Management" %} — {% trans "Student Management System" %}{% endblock %}
+{% block page_title %}{% trans "Attendance Tracker" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between items-center flex-wrap gap-3 mb-4">
+  <div>
+    <h1 class="fs-xl fw-700">{% trans "Attendance Management" %}</h1>
+    <div class="text-muted fs-sm">
+      {% trans "Record daily attendance or download monthly/periodic attendance reports" %}
+    </div>
+  </div>
+  <div class="d-flex items-center gap-2 flex-wrap">
+    <a href="{% url 'attendance_pdf_export' %}?start_date={{ start_date }}&end_date={{ end_date }}&class={{ class_filter }}&search={{ search_query }}" class="btn btn-danger btn-sm" target="_blank" title="{% trans 'Export PDF Report' %}">
+      <i class="fas fa-file-pdf me-1"></i>{% trans "PDF Report" %}
+    </a>
+    <a href="{% url 'attendance_excel_export' %}?start_date={{ start_date }}&end_date={{ end_date }}&class={{ class_filter }}&search={{ search_query }}" class="btn btn-success btn-sm" target="_blank" title="{% trans 'Export Excel Report' %}">
+      <i class="fas fa-file-excel me-1"></i>{% trans "Excel Report" %}
+    </a>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-4" style="border: 1px solid hsl(217, 20%, 90%); overflow: hidden;">
+  <div class="card-body" style="padding: 0;">
+    <form method="GET">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; align-items: end; background: hsl(217, 30%, 97%);">
+        <div style="padding: 14px 20px; border-right: 1px solid hsl(217, 20%, 92%);">
+          <label class="form-label" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: hsl(215, 15%, 55%); margin-bottom: 6px; display: block;">
+            <i class="fas fa-layer-group" style="margin-right: 4px; opacity: 0.7;"></i>{% trans "Class / Grade" %}
+          </label>
+          <select name="class" class="form-select" style="border: 1px solid hsl(217, 20%, 88%); border-radius: 6px; padding: 8px 12px; font-size: 0.875rem;">
+            <option value="">{% trans "All Classes" %}</option>
+            <option value="5" {% if class_filter == '5' %}selected{% endif %}>{% trans "Grade 5" %}</option>
+            <option value="6" {% if class_filter == '6' %}selected{% endif %}>{% trans "Grade 6" %}</option>
+            <option value="7" {% if class_filter == '7' %}selected{% endif %}>{% trans "Grade 7" %}</option>
+            <option value="8" {% if class_filter == '8' %}selected{% endif %}>{% trans "Grade 8" %}</option>
+          </select>
+        </div>
+        <div style="padding: 14px 20px; border-right: 1px solid hsl(217, 20%, 92%);">
+          <label class="form-label" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: hsl(215, 15%, 55%); margin-bottom: 6px; display: block;">
+            <i class="fas fa-calendar-alt" style="margin-right: 4px; opacity: 0.7;"></i>{% trans "Start Date" %}
+          </label>
+          <input type="date" name="start_date" id="id_start_date" class="form-control" value="{{ start_date }}" style="border: 1px solid hsl(217, 20%, 88%); border-radius: 6px; padding: 8px 12px; font-size: 0.875rem;">
+        </div>
+        <div style="padding: 14px 20px; border-right: 1px solid hsl(217, 20%, 92%);">
+          <label class="form-label" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: hsl(215, 15%, 55%); margin-bottom: 6px; display: block;">
+            <i class="fas fa-calendar-check" style="margin-right: 4px; opacity: 0.7;"></i>{% trans "End Date" %}
+          </label>
+          <input type="date" name="end_date" id="id_end_date" class="form-control" value="{{ end_date }}" style="border: 1px solid hsl(217, 20%, 88%); border-radius: 6px; padding: 8px 12px; font-size: 0.875rem;">
+        </div>
+        <div style="padding: 14px 20px; display: flex; gap: 8px; align-items: flex-end;">
+          <button type="submit" class="btn btn-primary" style="padding: 9px 22px; font-size: 0.85rem; font-weight: 600; border-radius: 6px; white-space: nowrap;">
+            <i class="fas fa-search me-1"></i>{% trans "Search" %}
+          </button>
+          {% if class_filter or start_date or end_date %}
+          <a href="{% url 'attendance_list' %}" class="btn" style="padding: 9px 16px; font-size: 0.85rem; font-weight: 600; border-radius: 6px; color: hsl(215, 15%, 50%); border: 1px solid hsl(217, 20%, 85%); background: white; white-space: nowrap;">
+            <i class="fas fa-undo me-1"></i>{% trans "Reset" %}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header justify-between flex-wrap gap-2">
+    <div class="card-title">
+      <i class="fas fa-calendar-day text-primary me-2"></i>
+      {% if start_date == end_date %}
+        {% trans "Date" %}: <strong>{{ date_filter_display }}</strong>
+      {% else %}
+        {% trans "Date Range" %}: <strong>{{ start_date }}</strong> {% trans "to" %} <strong>{{ end_date }}</strong>
+      {% endif %}
+      {% if class_filter %}
+        <span class="badge badge-primary ms-2">{% trans "Grade" %} {{ class_filter }}</span>
+      {% endif %}
+    </div>
+
+    <!-- Bulk Actions Toolbar -->
+    <div class="d-flex items-center gap-2">
+      <span class="fs-xs fw-600 text-muted">{% trans "Bulk Mark" %}:</span>
+      <button type="button" class="btn btn-success btn-sm" onclick="markAll('present')">
+        <i class="fas fa-check me-1"></i>{% trans "All Present" %}
+      </button>
+      <button type="button" class="btn btn-danger btn-sm" onclick="markAll('absent')">
+        <i class="fas fa-times me-1"></i>{% trans "All Absent" %}
+      </button>
+      <button type="button" class="btn btn-warning btn-sm" onclick="markAll('leave')">
+        <i class="fas fa-clock me-1"></i>{% trans "All Leave" %}
+      </button>
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+    <form method="POST" action="{% url 'attendance_save' %}" id="attendanceForm">
+      {% csrf_token %}
+      <input type="hidden" name="date" value="{{ date_filter }}">
+      <input type="hidden" name="start_date" value="{{ start_date }}">
+      <input type="hidden" name="end_date" value="{{ end_date }}">
+      <input type="hidden" name="class_filter" value="{{ class_filter }}">
+      <input type="hidden" name="search_query" value="{{ search_query }}">
+
+      {% if attendance_data %}
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 140px;">{% trans "Student ID" %}</th>
+                <th>{% trans "Student Name" %}</th>
+                <th style="width: 120px;">{% trans "Class" %}</th>
+                <th style="width: 220px;">{% trans "Status" %}</th>
+                <th>{% trans "Remarks" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in attendance_data %}
+              <tr>
+                <td class="fw-700 text-primary">{{ item.student.student_id }}</td>
+                <td class="fw-600">{{ item.student.name }}</td>
+                <td>
+                  <span class="badge badge-primary">{{ item.student.get_class_field_display }}</span>
+                </td>
+                <td>
+                  <select name="status_{{ item.student.id }}" class="form-select status-select" data-student-id="{{ item.student.id }}">
+                    <option value="present" {% if item.status == 'present' %}selected{% endif %}>🟢 {% trans "Present" %}</option>
+                    <option value="absent" {% if item.status == 'absent' %}selected{% endif %}>🔴 {% trans "Absent" %}</option>
+                    <option value="leave" {% if item.status == 'leave' %}selected{% endif %}>🟡 {% trans "Leave" %}</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text" name="remarks_{{ item.student.id }}" class="form-control" value="{{ item.remarks }}" placeholder="{% trans 'Remarks' %} ({% trans 'Optional' %})">
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-4 border-top d-flex justify-between items-center" style="background: var(--clr-surface-2);">
+          <div class="text-muted fs-xs">
+            <i class="fas fa-info-circle me-1"></i>{% trans "Changes will be saved atomically for all filtered students." %}
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save me-1"></i>{% trans "Save Attendance" %}
+          </button>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-users-slash"></i></div>
+          <div class="empty-title">{% trans "No matching students found." %}</div>
+          <div class="empty-desc">{% trans "Try adjusting your search query, class, or date range." %}</div>
+        </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAll(status) {
+  document.querySelectorAll('.status-select').forEach(sel => {
+    sel.value = status;
+  });
+}
+</script>
+{% endblock %}

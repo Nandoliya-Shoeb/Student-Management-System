@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Admin Dashboard" %} — {% trans "Student Management System" %}{% endblock %}
+{% block page_title %}{% trans "System Overview" %}{% endblock %}
+
+{% block content %}
+<!-- Quick Action Buttons Header -->
+<div class="d-flex justify-between items-center flex-wrap gap-2 mb-4">
+  <div>
+    <h1 class="fs-xl fw-700">{% trans "Dashboard" %}</h1>
+    <div class="text-muted fs-sm">{% trans "Welcome to the institution management hub" %}</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm">
+      <i class="fas fa-user-plus"></i>{% trans "Add Student" %}
+    </a>
+    <a href="{% url 'attendance_list' %}" class="btn btn-outline btn-sm">
+      <i class="fas fa-calendar-check"></i>{% trans "Mark Attendance" %}
+    </a>
+    <a href="{% url 'quiz_create' %}" class="btn btn-outline btn-sm">
+      <i class="fas fa-plus-circle"></i>{% trans "Create Quiz" %}
+    </a>
+    <a href="{% url 'fee_create' %}" class="btn btn-outline btn-sm">
+      <i class="fas fa-receipt"></i>{% trans "Add Fee" %}
+    </a>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <i class="fas fa-users"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Total Students" %}</div>
+      <div class="stat-value">{{ total_students }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <i class="fas fa-user-check"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Active Students" %}</div>
+      <div class="stat-value">{{ active_students }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon red">
+      <i class="fas fa-money-bill-wave"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Pending Fees" %}</div>
+      <div class="stat-value">₹ {{ pending_fees }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon cyan">
+      <i class="fas fa-chart-line"></i>
+    </div>
+    <div>
+      <div class="stat-label">{% trans "Average Quiz Score" %}</div>
+      <div class="stat-value">{{ avg_score }}%</div>
+    </div>
+  </div>
+</div>
+
+<div class="d-grid gap-5" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+
+  <!-- Today's Attendance Overview -->
+  <div class="card">
+    <div class="card-header justify-between">
+      <div class="card-title">
+        <i class="fas fa-calendar-day text-primary me-2"></i>{% trans "Today's Attendance" %}
+      </div>
+      <a href="{% url 'attendance_list' %}" class="btn btn-ghost btn-sm">{% trans "Manage" %} &rarr;</a>
+    </div>
+    <div class="card-body">
+      <div class="d-grid gap-3" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="text-center p-3 rounded" style="background: var(--clr-success-light);">
+          <div class="fs-2xl fw-700 text-success">{{ today_attendance.present }}</div>
+          <div class="fs-xs fw-600 text-muted">{% trans "Present" %}</div>
+        </div>
+        <div class="text-center p-3 rounded" style="background: var(--clr-danger-light);">
+          <div class="fs-2xl fw-700 text-danger">{{ today_attendance.absent }}</div>
+          <div class="fs-xs fw-600 text-muted">{% trans "Absent" %}</div>
+        </div>
+        <div class="text-center p-3 rounded" style="background: var(--clr-warning-light);">
+          <div class="fs-2xl fw-700 text-warning">{{ today_attendance.leave }}</div>
+          <div class="fs-xs fw-600 text-muted">{% trans "Leave" %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Summary -->
+  <div class="card">
+    <div class="card-header justify-between">
+      <div class="card-title">
+        <i class="fas fa-wallet text-primary me-2"></i>{% trans "Fee Collections" %}
+      </div>
+      <a href="{% url 'fee_list' %}" class="btn btn-ghost btn-sm">{% trans "Details" %} &rarr;</a>
+    </div>
+    <div class="card-body">
+      <div class="d-flex justify-between items-center p-3 mb-3 rounded" style="background: var(--clr-success-light);">
+        <div>
+          <div class="fs-xs fw-600 text-muted">{% trans "Collected Fees" %}</div>
+          <div class="fs-xl fw-700 text-success">₹ {{ collected_fees }}</div>
+        </div>
+        <i class="fas fa-check-circle fs-xl text-success"></i>
+      </div>
+      <div class="d-flex justify-between items-center p-3 rounded" style="background: var(--clr-danger-light);">
+        <div>
+          <div class="fs-xs fw-600 text-muted">{% trans "Pending Receivables" %}</div>
+          <div class="fs-xl fw-700 text-danger">₹ {{ pending_fees }}</div>
+        </div>
+        <i class="fas fa-clock fs-xl text-danger"></i>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Recent Quiz Results Across Institution -->
+<div class="card mt-5">
+  <div class="card-header justify-between">
+    <div class="card-title">
+      <i class="fas fa-history text-primary me-2"></i>{% trans "Recent Quiz Results" %}
+    </div>
+    <a href="{% url 'quiz_list' %}" class="btn btn-ghost btn-sm">{% trans "View Quizzes" %} &rarr;</a>
+  </div>
+  <div class="card-body p-0">
+    {% if recent_results %}
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>{% trans "Student" %}</th>
+              <th>{% trans "Quiz" %}</th>
+              <th>{% trans "Score" %}</th>
+              <th>{% trans "Percentage" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th>{% trans "Date" %}</th>
+              <th class="text-right">{% trans "Action" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for result in recent_results %}
+            <tr>
+              <td class="fw-600">{{ result.student.name }} <span class="text-muted fs-xs">({{ result.student.student_id }})</span></td>
+              <td>{{ result.quiz.title }}</td>
+              <td>{{ result.total_marks }} / {{ result.quiz.get_total_marks }}</td>
+              <td>{{ result.percentage }}%</td>
+              <td>
+                {% if result.passed %}
+                  <span class="badge badge-success">{% trans "Passed" %}</span>
+                {% else %}
+                  <span class="badge badge-danger">{% trans "Failed" %}</span>
+                {% endif %}
+              </td>
+              <td class="text-muted fs-xs">{{ result.taken_date|date:"d M Y H:i" }}</td>
+              <td class="text-right">
+                <a href="{% url 'quiz_result' result.id %}" class="btn btn-outline btn-sm">
+                  <i class="fas fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+        <div class="empty-title">{% trans "No quiz results recorded yet." %}</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
