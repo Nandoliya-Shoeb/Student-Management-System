@@ -1,59 +1,158 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% trans "Quizzes" %} — {% trans "Student Management System" %}{% endblock %}
+{% block title %}{% trans "Computer Quizzes" %} — {% trans "Student Management System" %}{% endblock %}
 {% block page_title %}{% trans "Quizzes" %}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-between items-center flex-wrap gap-2 mb-5">
+<!-- Page Header -->
+<div class="d-flex justify-between items-center flex-wrap gap-3 mb-5">
   <div>
-    <h1 class="fs-xl fw-700">
-      {% if is_student_view %}{% trans "Available Quizzes" %}{% else %}{% trans "Quiz Management" %}{% endif %}
-    </h1>
+    <div class="d-flex items-center gap-2 mb-1">
+      <h1 class="fs-xl fw-700">
+        {% if is_student_view %}{% trans "Computer Science Quizzes" %}{% else %}{% trans "Quiz Management" %}{% endif %}
+      </h1>
+      <span class="badge badge-primary">{{ total_count }} {% trans "Quizzes" %}</span>
+    </div>
     <div class="text-muted fs-sm">
-      {% if is_student_view %}{% trans "Select a quiz to test your knowledge" %}{% else %}{% trans "Create, manage and configure quizzes" %}{% endif %}
+      {% if is_student_view %}
+        {% trans "Practice and test your computer knowledge from Grade 5 to Grade 8" %}
+      {% else %}
+        {% trans "Create, manage and configure interactive computer quizzes and questions" %}
+      {% endif %}
     </div>
   </div>
   {% if not is_student_view %}
   <div>
-    <a href="{% url 'quiz_create' %}" class="btn btn-primary btn-sm">
-      <i class="fas fa-plus-circle me-1"></i>{% trans "Create Quiz" %}
+    <a href="{% url 'quiz_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus-circle me-1"></i>{% trans "Create New Quiz" %}
     </a>
   </div>
   {% endif %}
 </div>
 
+<!-- Search and Category Filter Bar -->
+<div class="filter-bar">
+  <div class="filter-pills">
+    <a href="?category=all{% if search_query %}&search={{ search_query }}{% endif %}" 
+       class="filter-pill {% if active_category == 'all' or not active_category %}active{% endif %}">
+      <i class="fas fa-layer-group me-1"></i>{% trans "All Quizzes" %}
+    </a>
+    <a href="?category=std56{% if search_query %}&search={{ search_query }}{% endif %}" 
+       class="filter-pill {% if active_category == 'std56' %}active{% endif %}">
+      <i class="fas fa-laptop me-1"></i>{% trans "STD 5-6 Basics" %}
+    </a>
+    <a href="?category=msoffice{% if search_query %}&search={{ search_query }}{% endif %}" 
+       class="filter-pill {% if active_category == 'msoffice' %}active{% endif %}">
+      <i class="fas fa-file-word me-1"></i>{% trans "MS Office (Word/Excel/PPT)" %}
+    </a>
+    <a href="?category=networking{% if search_query %}&search={{ search_query }}{% endif %}" 
+       class="filter-pill {% if active_category == 'networking' %}active{% endif %}">
+      <i class="fas fa-network-wired me-1"></i>{% trans "Internet & Networking" %}
+    </a>
+    <a href="?category=coding{% if search_query %}&search={{ search_query }}{% endif %}" 
+       class="filter-pill {% if active_category == 'coding' %}active{% endif %}">
+      <i class="fas fa-code me-1"></i>{% trans "Coding & Logic" %}
+    </a>
+  </div>
+
+  <form method="GET" class="filter-search-box">
+    {% if active_category and active_category != 'all' %}
+      <input type="hidden" name="category" value="{{ active_category }}">
+    {% endif %}
+    <i class="fas fa-search"></i>
+    <input type="text" name="search" value="{{ search_query }}" placeholder="{% trans 'Search quiz topic...' %}" autocomplete="off">
+    {% if search_query %}
+      <a href="?category={{ active_category }}" class="text-muted fs-xs me-1" title="{% trans 'Clear search' %}">
+        <i class="fas fa-times"></i>
+      </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Quizzes Grid -->
 {% if quizzes %}
-  <div class="d-grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+  <div class="quiz-grid">
     {% for quiz in quizzes %}
-    <div class="card d-flex flex-column">
-      <div class="card-header justify-between">
-        <span class="fw-700 fs-base">{{ quiz.title }}</span>
+    <div class="quiz-card-modern">
+      <!-- Top Topic Accent Line -->
+      {% if 'STD 5-6' in quiz.title or 'Basics' in quiz.title or 'Fundamentals' in quiz.title or 'Input' in quiz.title or 'Output' in quiz.title or 'Hardware' in quiz.title or 'Paint' in quiz.title or 'Safety' in quiz.title or 'Windows' in quiz.title %}
+        <div class="quiz-card-accent fundamentals"></div>
+      {% elif 'Word' in quiz.title or 'Excel' in quiz.title or 'PowerPoint' in quiz.title %}
+        <div class="quiz-card-accent msoffice"></div>
+      {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title or 'Cyber' in quiz.title or 'Security' in quiz.title %}
+        <div class="quiz-card-accent networking"></div>
+      {% else %}
+        <div class="quiz-card-accent coding"></div>
+      {% endif %}
+
+      <!-- Card Header -->
+      <div class="quiz-card-header">
+        <div class="d-flex items-center gap-3">
+          {% if 'Excel' in quiz.title %}
+            <div class="quiz-topic-icon green"><i class="fas fa-file-excel"></i></div>
+          {% elif 'Word' in quiz.title %}
+            <div class="quiz-topic-icon blue"><i class="fas fa-file-word"></i></div>
+          {% elif 'PowerPoint' in quiz.title %}
+            <div class="quiz-topic-icon orange"><i class="fas fa-file-powerpoint"></i></div>
+          {% elif 'Paint' in quiz.title %}
+            <div class="quiz-topic-icon purple"><i class="fas fa-palette"></i></div>
+          {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title %}
+            <div class="quiz-topic-icon green"><i class="fas fa-wifi"></i></div>
+          {% elif 'Cyber' in quiz.title or 'Security' in quiz.title or 'Safety' in quiz.title %}
+            <div class="quiz-topic-icon blue"><i class="fas fa-shield-alt"></i></div>
+          {% elif 'Coding' in quiz.title or 'Algorithm' in quiz.title or 'Logic' in quiz.title %}
+            <div class="quiz-topic-icon orange"><i class="fas fa-code"></i></div>
+          {% elif 'Keyboard' in quiz.title or 'Shortcut' in quiz.title %}
+            <div class="quiz-topic-icon blue"><i class="fas fa-keyboard"></i></div>
+          {% elif 'Storage' in quiz.title or 'RAM' in quiz.title %}
+            <div class="quiz-topic-icon purple"><i class="fas fa-memory"></i></div>
+          {% else %}
+            <div class="quiz-topic-icon blue"><i class="fas fa-desktop"></i></div>
+          {% endif %}
+
+          <div>
+            {% if 'STD 5-6' in quiz.title %}
+              <span class="quiz-grade-tag std56"><i class="fas fa-graduation-cap"></i> STD 5 - 6</span>
+            {% elif 'STD 6-8' in quiz.title or 'STD 7-8' in quiz.title or 'STD 5-7' in quiz.title or 'STD 6-7' in quiz.title %}
+              <span class="quiz-grade-tag std78"><i class="fas fa-graduation-cap"></i> STD 7 - 8</span>
+            {% else %}
+              <span class="quiz-grade-tag std56"><i class="fas fa-book"></i> STD 5 - 8</span>
+            {% endif %}
+          </div>
+        </div>
+
         {% if quiz.is_active %}
-          <span class="badge badge-success">{% trans "Active" %}</span>
+          <span class="badge badge-success"><i class="fas fa-check-circle"></i> {% trans "Active" %}</span>
         {% else %}
           <span class="badge badge-muted">{% trans "Inactive" %}</span>
         {% endif %}
       </div>
-      <div class="card-body flex-1">
-        <p class="text-muted fs-sm mb-4">{{ quiz.description|default:"—"|truncatewords:20 }}</p>
 
-        <div class="d-grid gap-2 mb-3" style="grid-template-columns: repeat(3, 1fr);">
-          <div class="p-2 rounded text-center" style="background: var(--clr-surface-2);">
-            <div class="fs-sm fw-700">{{ quiz.questions.count }} / {{ quiz.total_questions }}</div>
-            <div class="fs-xs text-muted">{% trans "Questions" %}</div>
+      <!-- Card Body -->
+      <div class="quiz-card-body">
+        <h3 class="quiz-card-title" title="{{ quiz.title }}">{{ quiz.title }}</h3>
+        <p class="quiz-card-desc">{{ quiz.description|default:"Test your knowledge with 20 comprehensive questions and answers." }}</p>
+
+        <!-- Metrics Grid -->
+        <div class="quiz-metrics-grid">
+          <div class="quiz-metric-item">
+            <div class="quiz-metric-value">{{ quiz.questions.count }} / {{ quiz.total_questions }}</div>
+            <div class="quiz-metric-label">{% trans "Questions" %}</div>
           </div>
-          <div class="p-2 rounded text-center" style="background: var(--clr-surface-2);">
-            <div class="fs-sm fw-700">{{ quiz.get_total_marks }}</div>
-            <div class="fs-xs text-muted">{% trans "Marks" %}</div>
+          <div class="quiz-metric-item">
+            <div class="quiz-metric-value">{{ quiz.get_total_marks }}</div>
+            <div class="quiz-metric-label">{% trans "Total Marks" %}</div>
           </div>
-          <div class="p-2 rounded text-center" style="background: var(--clr-surface-2);">
-            <div class="fs-sm fw-700">{{ quiz.passing_percentage }}%</div>
-            <div class="fs-xs text-muted">{% trans "Pass %" %}</div>
+          <div class="quiz-metric-item">
+            <div class="quiz-metric-value">{{ quiz.passing_percentage }}%</div>
+            <div class="quiz-metric-label">{% trans "Passing" %}</div>
           </div>
         </div>
       </div>
-      <div class="card-footer d-flex gap-2">
+
+      <!-- Card Footer -->
+      <div class="quiz-card-footer">
         {% if is_student_view %}
           {% if quiz.id in taken_ids %}
             <a href="{% url 'quiz_take' quiz.pk %}" class="btn btn-outline btn-sm w-100 justify-center">
@@ -65,13 +164,13 @@
             </a>
           {% endif %}
         {% else %}
-          <a href="{% url 'quiz_questions' quiz.pk %}" class="btn btn-outline btn-sm flex-1">
-            <i class="fas fa-list-ol me-1"></i>{% trans "Questions" %}
+          <a href="{% url 'quiz_questions' quiz.pk %}" class="btn btn-outline btn-sm flex-1 justify-center">
+            <i class="fas fa-list-check me-1"></i>{% trans "Questions" %}
           </a>
-          <a href="{% url 'quiz_edit' quiz.pk %}" class="btn btn-ghost btn-sm">
+          <a href="{% url 'quiz_edit' quiz.pk %}" class="btn btn-ghost btn-sm btn-icon" title="{% trans 'Edit Quiz' %}">
             <i class="fas fa-edit"></i>
           </a>
-          <a href="{% url 'quiz_delete' quiz.pk %}" class="btn btn-ghost btn-sm text-danger">
+          <a href="{% url 'quiz_delete' quiz.pk %}" class="btn btn-ghost btn-sm btn-icon text-danger" title="{% trans 'Delete Quiz' %}">
             <i class="fas fa-trash"></i>
           </a>
         {% endif %}
@@ -80,20 +179,21 @@
     {% endfor %}
   </div>
 
-  {% if not is_student_view and quizzes.has_other_pages %}
-    <div class="pagination mt-5 justify-center">
+  <!-- Pagination -->
+  {% if quizzes.has_other_pages %}
+    <div class="pagination justify-center mt-6 mb-6">
       {% if quizzes.has_previous %}
-        <a class="page-link" href="?page=1">&laquo;</a>
-        <a class="page-link" href="?page={{ quizzes.previous_page_number }}">&lsaquo;</a>
+        <a class="page-link" href="?page=1{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" title="{% trans 'First Page' %}">&laquo;</a>
+        <a class="page-link" href="?page={{ quizzes.previous_page_number }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">&lsaquo;</a>
       {% endif %}
 
       {% for num in quizzes.paginator.page_range %}
-        <a class="page-link {% if quizzes.number == num %}active{% endif %}" href="?page={{ num }}">{{ num }}</a>
+        <a class="page-link {% if quizzes.number == num %}active{% endif %}" href="?page={{ num }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
       {% endfor %}
 
       {% if quizzes.has_next %}
-        <a class="page-link" href="?page={{ quizzes.next_page_number }}">&rsaquo;</a>
-        <a class="page-link" href="?page={{ quizzes.paginator.num_pages }}">&raquo;</a>
+        <a class="page-link" href="?page={{ quizzes.next_page_number }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">&rsaquo;</a>
+        <a class="page-link" href="?page={{ quizzes.paginator.num_pages }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" title="{% trans 'Last Page' %}">&raquo;</a>
       {% endif %}
     </div>
   {% endif %}
@@ -101,13 +201,19 @@
 {% else %}
   <div class="card">
     <div class="empty-state">
-      <div class="empty-icon"><i class="fas fa-question-circle"></i></div>
-      <div class="empty-title">{% trans "No quizzes available." %}</div>
-      {% if not is_student_view %}
-        <a href="{% url 'quiz_create' %}" class="btn btn-primary btn-sm mt-3">
-          <i class="fas fa-plus-circle me-1"></i>{% trans "Create First Quiz" %}
+      <div class="empty-icon"><i class="fas fa-search text-muted"></i></div>
+      <div class="empty-title fs-lg">{% trans "No matching quizzes found." %}</div>
+      <p class="empty-desc mt-1">{% trans "Try selecting another topic filter or clearing your search keywords." %}</p>
+      <div class="mt-4 d-flex justify-center gap-2">
+        <a href="{% url 'quiz_list' %}" class="btn btn-outline btn-sm">
+          <i class="fas fa-redo me-1"></i>{% trans "View All Quizzes" %}
         </a>
-      {% endif %}
+        {% if not is_student_view %}
+          <a href="{% url 'quiz_create' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus-circle me-1"></i>{% trans "Create Quiz" %}
+          </a>
+        {% endif %}
+      </div>
     </div>
   </div>
 {% endif %}

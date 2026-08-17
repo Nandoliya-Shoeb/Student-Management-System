@@ -5,8 +5,16 @@
 {% block page_title %}{{ quiz.title }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-between items-center flex-wrap gap-2 mb-5">
+<!-- Page Header -->
+<div class="d-flex justify-between items-center flex-wrap gap-3 mb-5">
   <div>
+    <div class="d-flex items-center gap-2 mb-1">
+      <a href="{% url 'quiz_list' %}" class="text-muted fs-sm" title="{% trans 'Back to Quizzes' %}">
+        <i class="fas fa-arrow-left me-1"></i>{% trans "Quizzes" %}
+      </a>
+      <span class="text-faint">/</span>
+      <span class="fs-sm fw-600 text-primary">{% trans "Manage Questions" %}</span>
+    </div>
     <h1 class="fs-xl fw-700">{{ quiz.title }}</h1>
     <div class="text-muted fs-sm">{{ quiz.description|default:"—" }}</div>
   </div>
@@ -14,20 +22,21 @@
     <a href="{% url 'question_create' quiz.pk %}" class="btn btn-primary btn-sm">
       <i class="fas fa-plus-circle me-1"></i>{% trans "Add Question" %}
     </a>
-    <a href="{% url 'quiz_list' %}" class="btn btn-outline btn-sm">
-      <i class="fas fa-arrow-left me-1"></i>{% trans "Back to Quizzes" %}
+    <a href="{% url 'quiz_edit' quiz.pk %}" class="btn btn-outline btn-sm">
+      <i class="fas fa-cog me-1"></i>{% trans "Quiz Settings" %}
     </a>
   </div>
 </div>
 
-<div class="stat-cards mb-5">
+<!-- Stat Cards -->
+<div class="stat-cards mb-6">
   <div class="stat-card">
     <div class="stat-icon blue">
       <i class="fas fa-list-ol"></i>
     </div>
     <div>
       <div class="stat-label">{% trans "Questions" %}</div>
-      <div class="stat-value">{{ question_count }} / {{ quiz.total_questions }}</div>
+      <div class="stat-value">{{ question_count }} <span class="fs-sm text-muted fw-500">/ {{ quiz.total_questions }}</span></div>
     </div>
   </div>
 
@@ -46,71 +55,96 @@
       <i class="fas fa-percentage"></i>
     </div>
     <div>
-      <div class="stat-label">{% trans "Pass %" %}</div>
+      <div class="stat-label">{% trans "Pass Required" %}</div>
       <div class="stat-value">{{ quiz.passing_percentage }}%</div>
     </div>
   </div>
 
   <div class="stat-card">
     <div class="stat-icon {% if quiz.is_active %}cyan{% else %}red{% endif %}">
-      <i class="fas {% if quiz.is_active %}fa-check{% else %}fa-times{% endif %}"></i>
+      <i class="fas {% if quiz.is_active %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
     </div>
     <div>
       <div class="stat-label">{% trans "Status" %}</div>
       <div class="stat-value" style="font-size: var(--fs-lg);">
-        {% if quiz.is_active %}{% trans "Active" %}{% else %}{% trans "Inactive" %}{% endif %}
+        {% if quiz.is_active %}
+          <span class="text-success">{% trans "Active" %}</span>
+        {% else %}
+          <span class="text-muted">{% trans "Inactive" %}</span>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
 
+<!-- Questions List -->
 {% if questions %}
   <div class="card">
-    <div class="card-header">
-      <div class="card-title">
-        <i class="fas fa-question-circle text-primary me-2"></i>{% trans "Question List" %}
+    <div class="card-header justify-between">
+      <div class="card-title d-flex items-center gap-2">
+        <i class="fas fa-question-circle text-primary"></i>
+        <span>{% trans "Question Bank" %} ({{ question_count }})</span>
       </div>
+      <a href="{% url 'question_create' quiz.pk %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-plus me-1"></i>{% trans "New Question" %}
+      </a>
     </div>
+
     <div class="card-body p-0">
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th style="width: 50px;">#</th>
-              <th>{% trans "Question Text" %}</th>
-              <th>{% trans "Options" %}</th>
-              <th>{% trans "Correct" %}</th>
-              <th class="text-right">{% trans "Actions" %}</th>
+              <th style="width: 50px;" class="text-center">#</th>
+              <th style="min-width: 280px;">{% trans "Question Statement" %}</th>
+              <th style="min-width: 320px;">{% trans "Options" %}</th>
+              <th style="width: 100px;" class="text-center">{% trans "Correct" %}</th>
+              <th style="width: 110px;" class="text-right">{% trans "Actions" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for question in questions %}
             <tr>
-              <td class="fw-700 text-muted">{{ forloop.counter }}</td>
+              <td class="text-center fw-700 text-muted">{{ forloop.counter }}</td>
               <td>
-                <div class="fw-600">{{ question.question_text }}</div>
+                <div class="fw-600 text-dark mb-1">{{ question.question_text }}</div>
                 {% if question.explanation %}
-                  <div class="fs-xs text-muted mt-1">{{ question.explanation }}</div>
+                  <div class="fs-xs text-muted d-flex items-start gap-1 mt-1" style="background: hsl(220, 14%, 97%); padding: 4px 8px; border-radius: 4px;">
+                    <i class="fas fa-lightbulb text-warning mt-1"></i>
+                    <span>{{ question.explanation }}</span>
+                  </div>
                 {% endif %}
               </td>
               <td>
-                <div class="fs-xs text-muted">
-                  <div><strong>A:</strong> {{ question.option_a|truncatewords:4 }}</div>
-                  <div><strong>B:</strong> {{ question.option_b|truncatewords:4 }}</div>
-                  <div><strong>C:</strong> {{ question.option_c|truncatewords:4 }}</div>
-                  <div><strong>D:</strong> {{ question.option_d|truncatewords:4 }}</div>
+                <div class="d-grid gap-1" style="grid-template-columns: 1fr 1fr; font-size: var(--fs-xs);">
+                  <div class="p-1 rounded {% if question.correct_option == 'A' %}bg-success-subtle text-success fw-600{% else %}text-muted{% endif %}" style="background: {% if question.correct_option == 'A' %}var(--clr-success-light){% else %}var(--clr-surface-2){% endif %};">
+                    <strong>A:</strong> {{ question.option_a }}
+                  </div>
+                  <div class="p-1 rounded {% if question.correct_option == 'B' %}bg-success-subtle text-success fw-600{% else %}text-muted{% endif %}" style="background: {% if question.correct_option == 'B' %}var(--clr-success-light){% else %}var(--clr-surface-2){% endif %};">
+                    <strong>B:</strong> {{ question.option_b }}
+                  </div>
+                  <div class="p-1 rounded {% if question.correct_option == 'C' %}bg-success-subtle text-success fw-600{% else %}text-muted{% endif %}" style="background: {% if question.correct_option == 'C' %}var(--clr-success-light){% else %}var(--clr-surface-2){% endif %};">
+                    <strong>C:</strong> {{ question.option_c }}
+                  </div>
+                  <div class="p-1 rounded {% if question.correct_option == 'D' %}bg-success-subtle text-success fw-600{% else %}text-muted{% endif %}" style="background: {% if question.correct_option == 'D' %}var(--clr-success-light){% else %}var(--clr-surface-2){% endif %};">
+                    <strong>D:</strong> {{ question.option_d }}
+                  </div>
                 </div>
               </td>
-              <td>
-                <span class="badge badge-success">{{ question.correct_option }}</span>
+              <td class="text-center">
+                <span class="badge badge-success fs-sm" style="padding: 4px 10px; font-weight: 700;">
+                  <i class="fas fa-check me-1"></i>{{ question.correct_option }}
+                </span>
               </td>
               <td class="text-right">
-                <a href="{% url 'question_edit' question.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Edit' %}">
-                  <i class="fas fa-edit"></i>
-                </a>
-                <a href="{% url 'question_delete' question.pk %}" class="btn btn-ghost btn-sm text-danger" title="{% trans 'Delete' %}">
-                  <i class="fas fa-trash"></i>
-                </a>
+                <div class="d-inline-flex gap-1">
+                  <a href="{% url 'question_edit' question.pk %}" class="btn btn-ghost btn-sm btn-icon" title="{% trans 'Edit' %}">
+                    <i class="fas fa-edit text-primary"></i>
+                  </a>
+                  <a href="{% url 'question_delete' question.pk %}" class="btn btn-ghost btn-sm btn-icon text-danger" title="{% trans 'Delete' %}">
+                    <i class="fas fa-trash"></i>
+                  </a>
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -123,7 +157,8 @@
   <div class="card">
     <div class="empty-state">
       <div class="empty-icon"><i class="fas fa-question-circle"></i></div>
-      <div class="empty-title">{% trans "No questions added yet." %}</div>
+      <div class="empty-title fs-lg">{% trans "No questions added yet." %}</div>
+      <p class="empty-desc">{% trans "Add questions to make this quiz available for students to take." %}</p>
       <a href="{% url 'question_create' quiz.pk %}" class="btn btn-primary btn-sm mt-3">
         <i class="fas fa-plus-circle me-1"></i>{% trans "Add First Question" %}
       </a>

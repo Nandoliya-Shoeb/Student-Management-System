@@ -877,25 +877,58 @@ def quiz_list(request):
     quizzes = Quiz.objects.annotate(
         question_count=Count('questions'),
         attempt_count=Count('results'),
-    ).order_by('-created_at')
+    ).order_by('id')
 
     is_student = is_student_user(request.user)
 
-    # Students see only active quizzes they haven't taken (or can retake)
+    # Search filter
+    search_query = request.GET.get('search', '').strip()
+    if search_query:
+        quizzes = quizzes.filter(
+            Q(title__icontains=search_query) | Q(description__icontains=search_query)
+        )
+
+    # Category / Grade filter
+    category = request.GET.get('category', 'all').strip()
+    if category == 'std56':
+        quizzes = quizzes.filter(
+            Q(title__icontains='STD 5-6') | Q(title__icontains='Basics') | Q(title__icontains='Fundamentals') |
+            Q(title__icontains='Input') | Q(title__icontains='Output') | Q(title__icontains='Hardware') |
+            Q(title__icontains='Paint') | Q(title__icontains='Safety') | Q(title__icontains='Windows')
+        )
+    elif category == 'msoffice':
+        quizzes = quizzes.filter(
+            Q(title__icontains='Word') | Q(title__icontains='Excel') | Q(title__icontains='PowerPoint')
+        )
+    elif category == 'networking':
+        quizzes = quizzes.filter(
+            Q(title__icontains='Network') | Q(title__icontains='Internet') |
+            Q(title__icontains='Mail') | Q(title__icontains='Email') | Q(title__icontains='Cyber') | Q(title__icontains='Security')
+        )
+    elif category == 'coding':
+        quizzes = quizzes.filter(
+            Q(title__icontains='Coding') | Q(title__icontains='Algorithm') | Q(title__icontains='Logic') | Q(title__icontains='Evolution')
+        )
+
+    # Student filtering
+    taken_ids = []
     if is_student:
         student = get_student_for_user(request.user)
-        taken_ids = QuizResult.objects.filter(student=student).values_list('quiz_id', flat=True)
+        taken_ids = list(QuizResult.objects.filter(student=student).values_list('quiz_id', flat=True))
         quizzes = quizzes.filter(is_active=True)
-        context = {
-            'quizzes': quizzes,
-            'taken_ids': list(taken_ids),
-            'is_student_view': True,
-        }
-    else:
-        paginator = Paginator(quizzes, 10)
-        page_number = request.GET.get('page')
-        quizzes_page = paginator.get_page(page_number)
-        context = {'quizzes': quizzes_page}
+
+    paginator = Paginator(quizzes, 12)
+    page_number = request.GET.get('page')
+    quizzes_page = paginator.get_page(page_number)
+
+    context = {
+        'quizzes': quizzes_page,
+        'taken_ids': taken_ids,
+        'is_student_view': is_student,
+        'search_query': search_query,
+        'active_category': category,
+        'total_count': quizzes.count(),
+    }
 
     return render(request, 'quiz/list.html', context)
 
