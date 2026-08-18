@@ -42,7 +42,7 @@ class Student(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['name']
+        ordering = ['student_id']
         verbose_name = _('Student')
         verbose_name_plural = _('Students')
         indexes = [

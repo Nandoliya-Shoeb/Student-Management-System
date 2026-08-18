@@ -618,7 +618,7 @@ def attendance_list(request):
     search_query = request.GET.get('search', '').strip()
     class_filter = request.GET.get('class', '').strip()
 
-    students = Student.objects.filter(status='active')
+    students = Student.objects.filter(status='active').order_by('student_id')
 
     if search_query:
         students = students.filter(
