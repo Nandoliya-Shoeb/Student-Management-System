@@ -240,7 +240,7 @@ def dashboard(request):
     pending_fees = Fee.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
     collected_fees = Fee.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     today_attendance = Attendance.objects.filter(date=today).aggregate(
         present=Count(Case(When(status='present', then=1))),
         absent=Count(Case(When(status='absent', then=1))),
@@ -278,7 +278,7 @@ def student_dashboard(request):
 
     # Real data only — all filtered by authenticated student
     attendance_pct = calculate_attendance_percentage(student)
-    attendance_today = Attendance.objects.filter(student=student, date=timezone.now().date()).first()
+    attendance_today = Attendance.objects.filter(student=student, date=timezone.localdate()).first()
 
     quiz_results = QuizResult.objects.filter(student=student).select_related('quiz').order_by('-taken_date')
     total_tests = quiz_results.count()
@@ -292,7 +292,7 @@ def student_dashboard(request):
     available_quizzes = Quiz.objects.filter(is_active=True).order_by('-created_at')[:5]
 
     # Monthly attendance breakdown (last 30 days)
-    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    thirty_days_ago = timezone.localdate() - timedelta(days=30)
     recent_attendance = Attendance.objects.filter(
         student=student, date__gte=thirty_days_ago
     ).order_by('-date')[:10]
@@ -588,7 +588,7 @@ def attendance_list(request):
 
     auto_mark_absent_on_the_fly()
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_date_str = request.GET.get('start_date', '').strip()
     end_date_str = request.GET.get('end_date', '').strip()
     date_str = request.GET.get('date', '').strip()
@@ -767,7 +767,7 @@ def attendance_pdf_export(request):
     if is_student_user(request.user):
         return redirect('student_dashboard')
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_date_str = request.GET.get('start_date') or request.GET.get('date') or today.strftime('%Y-%m-%d')
     end_date_str = request.GET.get('end_date') or start_date_str
 
@@ -806,7 +806,7 @@ def attendance_excel_export(request):
     if is_student_user(request.user):
         return redirect('student_dashboard')
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_date_str = request.GET.get('start_date') or request.GET.get('date') or today.strftime('%Y-%m-%d')
     end_date_str = request.GET.get('end_date') or start_date_str
 
@@ -946,7 +946,7 @@ def fee_mark_paid(request, pk):
 
     fee = get_object_or_404(Fee, pk=pk)
     fee.status = 'paid'
-    fee.payment_date = timezone.now().date()
+    fee.payment_date = timezone.localdate()
     fee.save()
     messages.success(request, _('Fee marked as paid.'))
     return redirect('fee_list')

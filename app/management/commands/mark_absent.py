@@ -7,7 +7,7 @@ class Command(BaseCommand):
     help = 'Auto-mark active students as Absent if they have no attendance record for today by 06:00 PM'
 
     def handle(self, *args, **options):
-        today = timezone.localtime(timezone.now()).date()
+        today = timezone.localdate()
         active_students = Student.objects.filter(status='active')
 
         absent_count = 0
