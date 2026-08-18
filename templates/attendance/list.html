@@ -109,10 +109,12 @@
           <table>
             <thead>
               <tr>
-                <th style="width: 140px;">{% trans "Student ID" %}</th>
+                <th style="width: 130px;">{% trans "Student ID" %}</th>
                 <th>{% trans "Student Name" %}</th>
-                <th style="width: 120px;">{% trans "Class" %}</th>
-                <th style="width: 220px;">{% trans "Status" %}</th>
+                <th style="width: 100px;">{% trans "Class" %}</th>
+                <th style="width: 130px;">{% trans "Login Time" %}</th>
+                <th style="width: 130px;">{% trans "Entry Type" %}</th>
+                <th style="width: 180px;">{% trans "Status" %}</th>
                 <th>{% trans "Remarks" %}</th>
               </tr>
             </thead>
@@ -120,9 +122,27 @@
               {% for item in attendance_data %}
               <tr>
                 <td class="fw-700 text-primary">{{ item.student.student_id }}</td>
-                <td class="fw-600">{{ item.student.name }}</td>
+                <td class="fw-600">
+                  {{ item.student.name }}
+                </td>
                 <td>
                   <span class="badge badge-primary">{{ item.student.get_class_field_display }}</span>
+                </td>
+                <td>
+                  {% if item.record and item.record.login_time %}
+                    <span class="fs-xs fw-600 text-dark"><i class="far fa-clock me-1 text-primary"></i>{{ item.record.login_time|time:"h:i A" }}</span>
+                  {% else %}
+                    <span class="text-muted fs-xs">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if item.record and item.record.auto_marked %}
+                    <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.7rem;"><i class="fas fa-robot me-1"></i>Auto</span>
+                  {% elif item.record %}
+                    <span class="badge" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-size: 0.7rem;"><i class="fas fa-user-edit me-1"></i>Manual</span>
+                  {% else %}
+                    <span class="text-muted fs-xs">—</span>
+                  {% endif %}
                 </td>
                 <td>
                   <select name="status_{{ item.student.id }}" class="form-select status-select" data-student-id="{{ item.student.id }}">

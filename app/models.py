@@ -69,14 +69,17 @@ class Attendance(models.Model):
         ('absent', _('Absent')),
         ('leave', _('Leave')),
     ]
-    
+
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendance_records', verbose_name=_('Student'))
     date = models.DateField(verbose_name=_('Date'))
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, verbose_name=_('Status'))
     remarks = models.TextField(blank=True, verbose_name=_('Remarks'))
+    # Auto attendance fields
+    login_time = models.TimeField(null=True, blank=True, verbose_name=_('Login Time'))
+    auto_marked = models.BooleanField(default=False, verbose_name=_('Auto Marked'))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ('student', 'date')
         ordering = ['-date']
@@ -86,7 +89,7 @@ class Attendance(models.Model):
             models.Index(fields=['date']),
             models.Index(fields=['student', 'date']),
         ]
-    
+
     def __str__(self):
         return f"{self.student.name} - {self.date} - {self.status}"
 

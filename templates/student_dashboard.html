@@ -238,4 +238,299 @@
   </div>
 
 </div>
+
+<!-- Interactive Attendance Modal Popup -->
+{% if show_attendance_popup or not attendance_today %}
+<div id="attendanceModalOverlay" class="attendance-modal-overlay">
+  <div class="attendance-modal-card">
+    <div class="attendance-modal-header">
+      <div class="modal-badge-pulse">
+        <i class="fas fa-sun me-1"></i> 09:00 AM - 06:00 PM Window
+      </div>
+      <button type="button" class="modal-close-btn" onclick="closeAttendanceModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="attendance-modal-body">
+      <div class="attendance-avatar-ring">
+        <div class="attendance-avatar-inner">
+          <i class="fas fa-user-check"></i>
+        </div>
+      </div>
+
+      <h3 class="attendance-modal-title">
+        👋 નમસ્તે, {{ student.name }}!
+      </h3>
+      <p class="attendance-modal-desc">
+        આજની તમારી હાજરી (Attendance) નોંધવા માટે નીચે આપેલા બટન પર ક્લિક કરો.
+        <br>
+        <span class="fs-xs text-muted">Click below to mark your daily attendance.</span>
+      </p>
+
+      <div class="attendance-time-pill mb-3">
+        <i class="far fa-clock me-1 text-primary"></i>
+        <span id="liveClockDisplay">--:--:--</span>
+      </div>
+
+      <div id="attendanceActionBox">
+        <button id="markPresentBtn" type="button" class="btn-mark-present-hero" onclick="markStudentAttendance()">
+          <span class="btn-glow"></span>
+          <i class="fas fa-hand-pointer me-2"></i>
+          <span>હું વર્ગમાં હાજર છું (Mark Present)</span>
+        </button>
+      </div>
+
+      <div id="attendanceSuccessState" class="d-none">
+        <div class="success-icon-bounce">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <h4 class="text-success fw-700 mt-2 mb-1">અભિનંદન! તમારી હાજરી નોંધાઈ ગઈ છે.</h4>
+        <p class="fs-xs text-muted" id="attendanceSuccessMsg">Attendance marked successfully!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.attendance-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeInOverlay 0.4s ease forwards;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.attendance-modal-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 440px;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 40px rgba(59, 130, 246, 0.2);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  animation: modalPopUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes modalPopUp {
+  from { transform: scale(0.8) translateY(30px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.attendance-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px 0;
+}
+
+.modal-badge-pulse {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #bfdbfe;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.15);
+}
+
+.modal-close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.attendance-modal-body {
+  padding: 24px 28px 32px;
+  text-align: center;
+}
+
+.attendance-avatar-ring {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  padding: 4px;
+  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+  animation: pulseRing 2s infinite;
+}
+
+@keyframes pulseRing {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6); }
+  70% { box-shadow: 0 0 0 18px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.attendance-avatar-inner {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: #2563eb;
+}
+
+.attendance-modal-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.attendance-modal-desc {
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.attendance-time-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.btn-mark-present-hero {
+  position: relative;
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.5);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-mark-present-hero:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.6);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.btn-mark-present-hero:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.success-icon-bounce {
+  font-size: 3.5rem;
+  color: #10b981;
+  animation: iconBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes iconBounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+</style>
+
+<script>
+function updateLiveClock() {
+  const clockEl = document.getElementById('liveClockDisplay');
+  if (clockEl) {
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString();
+  }
+}
+setInterval(updateLiveClock, 1000);
+updateLiveClock();
+
+function closeAttendanceModal() {
+  const overlay = document.getElementById('attendanceModalOverlay');
+  if (overlay) {
+    overlay.style.animation = 'fadeOutOverlay 0.3s ease forwards';
+    setTimeout(() => { overlay.remove(); }, 300);
+  }
+}
+
+function markStudentAttendance() {
+  const btn = document.getElementById('markPresentBtn');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> પ્રોસેસ થઈ રહ્યું છે...';
+
+  const csrfToken = '{{ csrf_token }}';
+
+  fetch('{% url "student_mark_attendance" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': csrfToken
+    },
+    body: ''
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('attendanceActionBox').classList.add('d-none');
+      const successBox = document.getElementById('attendanceSuccessState');
+      successBox.classList.remove('d-none');
+      document.getElementById('attendanceSuccessMsg').innerText = data.message;
+
+      setTimeout(() => {
+        closeAttendanceModal();
+        window.location.reload();
+      }, 2000);
+    } else {
+      alert(data.error || 'ઓપરેશન નિષ્ફળ ગયું.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-hand-pointer me-2"></i> હું વર્ગમાં હાજર છું (Mark Present)';
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert('કનેક્શન ક્ષતિ! કૃપા કરીને પાછળથી પ્રયાસ કરો.');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-hand-pointer me-2"></i> હું વર્ગમાં હાજર છું (Mark Present)';
+  });
+}
+</script>
+{% endif %}
 {% endblock %}

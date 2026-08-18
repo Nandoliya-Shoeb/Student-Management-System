@@ -112,18 +112,31 @@ def login_view(request):
             password = form.cleaned_data['password']
             user = authenticate(request, username=username, password=password)
             if user is None and username.lower() != 'admin':
-                # If student entered lowercase student ID, authenticate against uppercase
                 user = authenticate(request, username=username.upper(), password=password)
             if user is not None:
                 if not user.is_active:
                     messages.error(request, _('Your account is inactive. Contact admin.'))
                     return render(request, 'login.html', {'form': form})
                 login(request, user)
-                # 10 Hours session expiry (36,000 seconds)
                 request.session.set_expiry(10 * 60 * 60)
                 messages.success(request, _('Login successful!'))
                 student = get_student_for_user(user)
                 if student:
+                    # --- AUTO ATTENDANCE POPUP LOGIC ---
+                    now_local = timezone.localtime(timezone.now())
+                    today = now_local.date()
+                    current_time = now_local.time()
+                    from datetime import time as dtime
+                    window_start = dtime(9, 0)   # 09:00 AM
+                    window_end = dtime(18, 0)     # 06:00 PM
+                    in_window = window_start <= current_time <= window_end
+                    already_marked = Attendance.objects.filter(student=student, date=today).exists()
+                    if in_window and not already_marked:
+                        request.session['show_attendance_popup'] = True
+                        request.session['attendance_login_time'] = current_time.strftime('%H:%M:%S')
+                    else:
+                        request.session.pop('show_attendance_popup', None)
+                    # -----------------------------------
                     return redirect('student_dashboard')
                 return redirect('dashboard')
             else:
@@ -138,6 +151,56 @@ def logout_view(request):
     logout(request)
     messages.success(request, _('Logged out successfully.'))
     return redirect('login')
+
+
+# ---------------------------------------------------------------------------
+# Student Mark Attendance via Popup (AJAX)
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+def student_mark_attendance(request):
+    """Called via AJAX when student clicks 'Mark Present' in popup."""
+    student = get_student_for_user(request.user)
+    if not student:
+        return JsonResponse({'success': False, 'error': 'Not a student'}, status=403)
+
+    now_local = timezone.localtime(timezone.now())
+    today = now_local.date()
+    current_time = now_local.time()
+
+    # Check window 9AM - 6PM
+    from datetime import time as dtime
+    window_start = dtime(9, 0)
+    window_end = dtime(18, 0)
+    if not (window_start <= current_time <= window_end):
+        return JsonResponse({'success': False, 'error': 'Outside attendance window (9AM - 6PM)'})
+
+    # Only create if not already marked
+    record, created = Attendance.objects.get_or_create(
+        student=student,
+        date=today,
+        defaults={
+            'status': 'present',
+            'login_time': current_time,
+            'auto_marked': True,
+            'remarks': 'Auto-marked via student login popup',
+        }
+    )
+
+    # Clear session flag
+    request.session.pop('show_attendance_popup', None)
+    request.session.pop('attendance_login_time', None)
+
+    return JsonResponse({
+        'success': True,
+        'created': created,
+        'status': record.status,
+        'login_time': current_time.strftime('%I:%M %p'),
+        'message': 'Attendance marked as Present!' if created else 'Already marked: ' + record.status.capitalize(),
+    })
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -210,6 +273,10 @@ def student_dashboard(request):
         student=student, date__gte=thirty_days_ago
     ).order_by('-date')[:10]
 
+    # Pop popup flag from session (show once)
+    show_popup = request.session.pop('show_attendance_popup', False)
+    attendance_login_time = request.session.pop('attendance_login_time', None)
+
     context = {
         'student': student,
         'attendance_pct': attendance_pct,
@@ -223,6 +290,8 @@ def student_dashboard(request):
         'available_quizzes': available_quizzes,
         'recent_attendance': recent_attendance,
         'is_student_view': True,
+        'show_attendance_popup': show_popup,
+        'attendance_login_time': attendance_login_time,
     }
     return render(request, 'student_dashboard.html', context)
 
