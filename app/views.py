@@ -203,6 +203,26 @@ def student_mark_attendance(request):
 
 
 
+# Helper function to auto-mark absent after 6 PM on-the-fly (no paid scheduled task needed)
+def auto_mark_absent_on_the_fly():
+    now_local = timezone.localtime(timezone.now())
+    today = now_local.date()
+    current_time = now_local.time()
+    from datetime import time as dtime
+    if current_time >= dtime(18, 0):  # After 6:00 PM
+        active_students = Student.objects.filter(status='active')
+        for student in active_students:
+            Attendance.objects.get_or_create(
+                student=student,
+                date=today,
+                defaults={
+                    'status': 'absent',
+                    'auto_marked': True,
+                    'remarks': 'Auto-marked absent (No login between 09:00 AM - 06:00 PM)'
+                }
+            )
+
+
 # ---------------------------------------------------------------------------
 # Admin dashboard (staff/superuser only)
 # ---------------------------------------------------------------------------
@@ -212,6 +232,8 @@ def dashboard(request):
     # If logged-in user is a student, redirect to student dashboard
     if is_student_user(request.user):
         return redirect('student_dashboard')
+
+    auto_mark_absent_on_the_fly()
 
     total_students = Student.objects.count()
     active_students = Student.objects.filter(status='active').count()
@@ -251,6 +273,8 @@ def student_dashboard(request):
     if not student:
         messages.error(request, _('Access denied.'))
         return redirect('dashboard')
+
+    auto_mark_absent_on_the_fly()
 
     # Real data only — all filtered by authenticated student
     attendance_pct = calculate_attendance_percentage(student)
@@ -561,6 +585,8 @@ def student_csv_import(request):
 def attendance_list(request):
     if is_student_user(request.user):
         return redirect('student_dashboard')
+
+    auto_mark_absent_on_the_fly()
 
     today = timezone.now().date()
     start_date_str = request.GET.get('start_date', '').strip()
