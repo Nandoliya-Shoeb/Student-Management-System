@@ -76,9 +76,7 @@ class StudentForm(forms.ModelForm):
         widgets = {
             'student_id': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'STU001',
-                'style': 'text-transform: uppercase;',
-                'oninput': 'this.value = this.value.toUpperCase()'
+                'placeholder': '626',
             }),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'parent_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional', 'required': False}),
@@ -93,9 +91,9 @@ class StudentForm(forms.ModelForm):
         }
 
     def clean_student_id(self):
-        student_id = self.cleaned_data.get('student_id', '').strip().upper()
+        student_id = self.cleaned_data.get('student_id', '').strip()
         if not student_id:
-            raise forms.ValidationError(_('Student ID is required.'))
+            raise forms.ValidationError(_('GR.NO is required.'))
         return student_id
 
 

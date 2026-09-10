@@ -27,7 +27,7 @@ class Student(models.Model):
         related_name='student',
         verbose_name=_('User Account'),
     )
-    student_id = models.CharField(max_length=50, unique=True, verbose_name=_('Student ID'))
+    student_id = models.CharField(max_length=50, unique=True, verbose_name=_('GR.NO'))
     name = models.CharField(max_length=100, verbose_name=_('Name'))
     parent_name = models.CharField(max_length=100, blank=True, null=True, verbose_name=_('Parent Name'))
     parent_mobile = models.CharField(max_length=15, blank=True, null=True, default='', verbose_name=_('Parent Mobile'))

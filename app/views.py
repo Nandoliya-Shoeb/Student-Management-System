@@ -656,20 +656,17 @@ def student_csv_import(request):
                             errors.append(f"Row {row_idx}: {_('Student name is required')}")
                             continue
 
-                        # Format Student ID / GR Number
+                        # Format Student ID / GR Number (Only clean number, no STD prefix)
                         if gr_no:
-                            # Handle float in Excel like 626.0 -> 626
                             if gr_no.endswith('.0'):
                                 gr_no = gr_no[:-2]
-                            stu_id = gr_no.upper()
-                            if stu_id.isdigit():
-                                stu_id = f"STD{stu_id}"
+                            stu_id = gr_no.strip()
                         elif sr_no:
                             if sr_no.endswith('.0'):
                                 sr_no = sr_no[:-2]
-                            stu_id = f"STD{class_val}{str(sr_no).zfill(3)}"
+                            stu_id = str(sr_no).strip()
                         else:
-                            stu_id = f"STD{class_val}{str(row_idx).zfill(3)}"
+                            stu_id = str(row_idx)
 
                         joining_date = parse_flex_date(dob_val)
 
