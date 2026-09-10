@@ -416,11 +416,12 @@ def student_create(request):
             with transaction.atomic():
                 # Create Django User for student
                 student_id = form.cleaned_data['student_id']
-                password = user_form.cleaned_data['password']
+                # Default password to GR.NO if not explicitly provided
+                password = user_form.cleaned_data.get('password') or student_id
 
                 # Use student_id as Django username
                 if User.objects.filter(username=student_id).exists():
-                    messages.error(request, _('A user with this Student ID already exists.'))
+                    messages.error(request, _('A user with this GR.NO already exists.'))
                     return render(request, 'students/form.html', {
                         'form': form, 'user_form': user_form, 'title': _('Add Student')
                     })
@@ -489,9 +490,9 @@ def student_reset_password(request, pk):
 
     if request.method == 'POST':
         new_password = request.POST.get('new_password', '').strip()
-        if len(new_password) < 6:
-            messages.error(request, _('Password must be at least 6 characters.'))
-            return redirect('student_detail', pk=pk)
+        # If left blank, default to GR.NO
+        if not new_password:
+            new_password = student.student_id
 
         with transaction.atomic():
             if student.user:
@@ -506,9 +507,9 @@ def student_reset_password(request, pk):
                     email=student.email or '',
                 )
                 student.user = django_user
-                student.save()
+                student.save(update_fields=['user'])
 
-        messages.success(request, _('Password reset successfully.'))
+        messages.success(request, f'✅ {student.name} નો પાસવર્ડ સેટ થઈ ગયો: {new_password}')
         return redirect('student_detail', pk=pk)
 
     return render(request, 'students/reset_password.html', {'student': student})
@@ -530,6 +531,31 @@ def student_delete(request, pk):
         return redirect('student_list')
 
     return render(request, 'students/confirm_delete.html', {'student': student})
+
+
+@login_required(login_url='login')
+def student_bulk_delete(request):
+    """Delete multiple selected students in one go."""
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    if request.method == 'POST':
+        student_ids = request.POST.getlist('student_ids')
+        if not student_ids:
+            messages.warning(request, _('કૃપા કરીને ડિલીટ કરવા માટે ઓછામાં ઓછો એક વિદ્યાર્થી પસંદ કરો.'))
+            return redirect('student_list')
+
+        with transaction.atomic():
+            students = Student.objects.filter(pk__in=student_ids)
+            count = students.count()
+            user_ids = [s.user_id for s in students if s.user_id]
+            if user_ids:
+                User.objects.filter(id__in=user_ids).delete()
+            students.delete()
+
+        messages.success(request, f'✅ {count} {_("વિદ્યાર્થીઓ સફળતાપૂર્વક ડિલીટ થઈ ગયા.")}')
+
+    return redirect('student_list')
 
 
 @login_required(login_url='login')

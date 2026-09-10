@@ -56,70 +56,146 @@
 </div>
 
 {% if students %}
-  <div class="card">
-    <div class="card-body p-0">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 50px;">{% trans "SR.NO" %}</th>
-              <th>{% trans "GR.NO" %}</th>
-              <th>{% trans "Student Name" %}</th>
-              <th>{% trans "Class" %}</th>
-              <th>{% trans "Login Account" %}</th>
-              <th>{% trans "Contact" %}</th>
-              <th>{% trans "Status" %}</th>
-              <th class="text-right">{% trans "Actions" %}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for student in students %}
-            <tr>
-              <td class="text-muted fs-xs fw-600">{{ forloop.counter }}</td>
-              <td class="fw-700 text-primary">{{ student.student_id }}</td>
-              <td>
-                <div class="fw-600">{{ student.name }}</div>
-                <div class="fs-xs text-muted">{{ student.email }}</div>
-              </td>
-              <td><span class="badge badge-primary">{{ student.get_class_field_display }}</span></td>
-              <td>
-                {% if student.user %}
-                  <span class="badge badge-success"><i class="fas fa-key me-1"></i>{% trans "Active Login" %}</span>
-                {% else %}
-                  <a href="{% url 'student_reset_password' student.pk %}" class="badge badge-warning" title="{% trans 'Click to set password' %}">
-                    <i class="fas fa-plus me-1"></i>{% trans "Create Password" %}
-                  </a>
-                {% endif %}
-              </td>
-              <td class="fs-xs text-muted">{{ student.phone }}</td>
-              <td>
-                {% if student.status == 'active' %}
-                  <span class="badge badge-success">{% trans "Active" %}</span>
-                {% else %}
-                  <span class="badge badge-muted">{% trans "Inactive" %}</span>
-                {% endif %}
-              </td>
-              <td class="text-right">
-                <a href="{% url 'student_detail' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'View Profile' %}">
-                  <i class="fas fa-eye"></i>
-                </a>
-                <a href="{% url 'student_edit' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Edit' %}">
-                  <i class="fas fa-edit"></i>
-                </a>
-                <a href="{% url 'student_reset_password' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Reset Password' %}">
-                  <i class="fas fa-key"></i>
-                </a>
-                <a href="{% url 'student_delete' student.pk %}" class="btn btn-ghost btn-sm text-danger" title="{% trans 'Delete' %}">
-                  <i class="fas fa-trash"></i>
-                </a>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  <form method="POST" action="{% url 'student_bulk_delete' %}" id="bulkDeleteForm">
+    {% csrf_token %}
+
+    <!-- Bulk Action Toolbar -->
+    <div id="bulkActionToolbar" class="card mb-3 p-3" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px;">
+      <div class="d-flex justify-between items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge badge-danger px-2 py-1 fs-xs" id="selectedBadge">0 Selected</span>
+          <span class="fs-xs text-muted">{% trans "વિદ્યાર્થીઓ પસંદ કરેલ છે" %}</span>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-ghost btn-sm text-muted" onclick="deselectAll()">
+            {% trans "Cancel / રદ કરો" %}
+          </button>
+          <button type="button" class="btn btn-danger btn-sm fw-600" onclick="confirmBulkDelete()">
+            <i class="fas fa-trash-alt me-1"></i> {% trans "Delete Selected (પસંદ કરેલા ડિલીટ કરો)" %}
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">
+                  <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="{% trans 'Select All / બધા પસંદ કરો' %}" style="cursor: pointer; width: 16px; height: 16px;">
+                </th>
+                <th style="width: 50px;">{% trans "SR.NO" %}</th>
+                <th>{% trans "GR.NO" %}</th>
+                <th>{% trans "Student Name" %}</th>
+                <th>{% trans "Class" %}</th>
+                <th>{% trans "Login Account" %}</th>
+                <th>{% trans "Contact" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th class="text-right">{% trans "Actions" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for student in students %}
+              <tr>
+                <td style="text-align: center;">
+                  <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox" onchange="updateSelectionUI()" style="cursor: pointer; width: 16px; height: 16px;">
+                </td>
+                <td class="text-muted fs-xs fw-600">{{ forloop.counter }}</td>
+                <td class="fw-700 text-primary">{{ student.student_id }}</td>
+                <td>
+                  <div class="fw-600">{{ student.name }}</div>
+                  <div class="fs-xs text-muted">{{ student.email }}</div>
+                </td>
+                <td><span class="badge badge-primary">{{ student.get_class_field_display }}</span></td>
+                <td>
+                  {% if student.user %}
+                    <span class="badge badge-success"><i class="fas fa-key me-1"></i>{% trans "Active Login" %}</span>
+                  {% else %}
+                    <a href="{% url 'student_reset_password' student.pk %}" class="badge badge-warning" title="{% trans 'Click to set password' %}">
+                      <i class="fas fa-plus me-1"></i>{% trans "Create Password" %}
+                    </a>
+                  {% endif %}
+                </td>
+                <td class="fs-xs text-muted">{{ student.phone }}</td>
+                <td>
+                  {% if student.status == 'active' %}
+                    <span class="badge badge-success">{% trans "Active" %}</span>
+                  {% else %}
+                    <span class="badge badge-muted">{% trans "Inactive" %}</span>
+                  {% endif %}
+                </td>
+                <td class="text-right">
+                  <a href="{% url 'student_detail' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'View Profile' %}">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  <a href="{% url 'student_edit' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Edit' %}">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <a href="{% url 'student_reset_password' student.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Reset Password' %}">
+                    <i class="fas fa-key"></i>
+                  </a>
+                  <a href="{% url 'student_delete' student.pk %}" class="btn btn-ghost btn-sm text-danger" title="{% trans 'Delete' %}">
+                    <i class="fas fa-trash"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <script>
+    function toggleSelectAll(master) {
+      const checkboxes = document.querySelectorAll('.student-checkbox');
+      checkboxes.forEach(cb => cb.checked = master.checked);
+      updateSelectionUI();
+    }
+
+    function deselectAll() {
+      const master = document.getElementById('selectAll');
+      if (master) master.checked = false;
+      const checkboxes = document.querySelectorAll('.student-checkbox');
+      checkboxes.forEach(cb => cb.checked = false);
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+      const count = checkboxes.length;
+      const toolbar = document.getElementById('bulkActionToolbar');
+      const badge = document.getElementById('selectedBadge');
+      
+      if (count > 0) {
+        toolbar.style.display = 'block';
+        badge.innerText = count + ' Selected';
+      } else {
+        toolbar.style.display = 'none';
+      }
+
+      const all = document.querySelectorAll('.student-checkbox');
+      const master = document.getElementById('selectAll');
+      if (master && all.length > 0) {
+        master.checked = (count === all.length);
+      }
+    }
+
+    function confirmBulkDelete() {
+      const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+      const count = checkboxes.length;
+      if (count === 0) {
+        alert('કૃપા કરીને ડિલીટ કરવા માટે ઓછામાં ઓછો એક વિદ્યાર્થી પસંદ કરો.');
+        return;
+      }
+      if (confirm(`શું તમે ખરેખર પસંદ કરેલા ${count} વિદ્યાર્થીઓને કાયમ માટે Delete કરવા માંગો છો?`)) {
+        document.getElementById('bulkDeleteForm').submit();
+      }
+    }
+  </script>
 
   {% if students.has_other_pages %}
     <div class="pagination mt-4 justify-center">

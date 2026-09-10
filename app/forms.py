@@ -34,19 +34,20 @@ class LoginForm(AuthenticationForm):
 class StudentUserForm(forms.Form):
     """Used when creating a new student to set their login password."""
     password = forms.CharField(
-        label=_('Login Password'),
-        min_length=6,
+        label=_('Login Password (લૉગિન પાસવર્ડ)'),
+        required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
-            'placeholder': _('Minimum 6 characters'),
+            'placeholder': _('Default: GR.NO (ખાલી રાખશો તો GR.NO જ પાસવર્ડ રહેશે)'),
         }),
-        help_text=_('Student will use their Student ID + this password to login.')
+        help_text=_('ખાલી રાખશો તો વિદ્યાર્થીનો GR.NO જ તેમનો પાસવર્ડ રહેશે.')
     )
     password_confirm = forms.CharField(
-        label=_('Confirm Password'),
+        label=_('Confirm Password (કન્ફર્મ પાસવર્ડ)'),
+        required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
-            'placeholder': _('Repeat password'),
+            'placeholder': _(' Repeat password / રિપીટ પાસવર્ડ'),
         })
     )
 
@@ -56,6 +57,8 @@ class StudentUserForm(forms.Form):
         confirm = cleaned_data.get('password_confirm')
         if pwd and confirm and pwd != confirm:
             raise forms.ValidationError(_('Passwords do not match.'))
+        if pwd and not confirm:
+            raise forms.ValidationError(_('Please confirm your password.'))
         return cleaned_data
 
 
