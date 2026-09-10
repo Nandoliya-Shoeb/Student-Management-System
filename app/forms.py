@@ -60,6 +60,12 @@ class StudentUserForm(forms.Form):
 
 
 class StudentForm(forms.ModelForm):
+    parent_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional'}),
+        label=_('Parent / Guardian Name'),
+    )
+
     class Meta:
         model = Student
         fields = [
@@ -75,7 +81,7 @@ class StudentForm(forms.ModelForm):
                 'oninput': 'this.value = this.value.toUpperCase()'
             }),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'parent_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'parent_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional', 'required': False}),
             'parent_mobile': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),

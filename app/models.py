@@ -29,7 +29,7 @@ class Student(models.Model):
     )
     student_id = models.CharField(max_length=50, unique=True, verbose_name=_('Student ID'))
     name = models.CharField(max_length=100, verbose_name=_('Name'))
-    parent_name = models.CharField(max_length=100, verbose_name=_('Parent Name'))
+    parent_name = models.CharField(max_length=100, blank=True, null=True, verbose_name=_('Parent Name'))
     parent_mobile = models.CharField(max_length=15, verbose_name=_('Parent Mobile'))
     email = models.EmailField(blank=True, null=True, verbose_name=_('Email'))
     phone = models.CharField(max_length=15, verbose_name=_('Phone'))
