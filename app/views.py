@@ -528,53 +528,151 @@ def student_csv_import(request):
         form = CSVImportForm(request.POST, request.FILES)
         if form.is_valid():
             csv_file = request.FILES['csv_file']
+            default_class = form.cleaned_data.get('default_class', '8')
             try:
-                # Fix Bug 8: read once, use StringIO for csv.DictReader
-                raw_content = csv_file.read().decode('utf-8')
-                reader = csv.DictReader(io.StringIO(raw_content))
+                # Read with flexible encoding support
+                raw_bytes = csv_file.read()
+                try:
+                    raw_content = raw_bytes.decode('utf-8-sig')
+                except UnicodeDecodeError:
+                    try:
+                        raw_content = raw_bytes.decode('utf-8')
+                    except UnicodeDecodeError:
+                        raw_content = raw_bytes.decode('latin-1')
+
+                # Support both comma and tab delimited files
+                sample = raw_content[:2048]
+                delimiter = '\t' if '\t' in sample and sample.count('\t') > sample.count(',') else ','
+                reader = csv.DictReader(io.StringIO(raw_content), delimiter=delimiter)
 
                 created_count = 0
+                updated_count = 0
                 errors = []
 
-                for row in reader:
+                def parse_flex_date(date_val):
+                    if not date_val:
+                        return timezone.localdate()
+                    val = str(date_val).strip()
+                    formats = [
+                        '%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y',
+                        '%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d',
+                        '%d/%m/%y', '%d-%m-%y', '%d.%m.%y',
+                        '%d %b %Y', '%d %B %Y',
+                    ]
+                    for fmt in formats:
+                        try:
+                            return datetime.strptime(val, fmt).date()
+                        except ValueError:
+                            continue
+                    return timezone.localdate()
+
+                for row_idx, raw_row in enumerate(reader, start=2):
                     try:
-                        stu_id = row['student_id'].strip().upper()
-                        if Student.objects.filter(student_id=stu_id).exists():
-                            errors.append(f"{stu_id}: {_('Duplicate student ID')}")
+                        # Clean and normalize column names (lowercase, no spaces, no dots, no underscores)
+                        row = {}
+                        for k, v in raw_row.items():
+                            if k:
+                                norm_k = k.strip().lower().replace('.', '').replace(' ', '').replace('_', '').replace('-', '')
+                                row[norm_k] = str(v).strip() if v is not None else ''
+
+                        # Extract fields flexibly
+                        sr_no = row.get('srno') or row.get('sr') or row.get('serialno') or row.get('sno') or ''
+                        gr_no = row.get('grno') or row.get('gr') or row.get('grnumber') or row.get('studentid') or row.get('id') or row.get('rollno') or ''
+                        name = row.get('studentname') or row.get('name') or row.get('student') or row.get('fullname') or ''
+                        dob_str = row.get('dob') or row.get('birthdate') or row.get('dateofbirth') or row.get('joiningdate') or ''
+                        address = row.get('address') or row.get('add') or row.get('city') or ''
+                        mobile = row.get('mobailno') or row.get('mobileno') or row.get('mobail') or row.get('mobile') or row.get('phone') or row.get('phoneno') or row.get('contact') or row.get('parentmobile') or ''
+                        parent_name = row.get('parentname') or row.get('fathername') or row.get('guardianname') or ''
+                        email = row.get('email') or row.get('emailid') or ''
+                        class_val = row.get('class') or row.get('classfield') or row.get('grade') or row.get('standard') or row.get('std') or row.get('dhoran') or default_class
+
+                        # Ensure valid class choice (5, 6, 7, 8)
+                        class_val = str(class_val).strip()
+                        if class_val not in ['5', '6', '7', '8']:
+                            # Extract first digit if present like "STD 8" -> "8"
+                            digits = [c for c in class_val if c in '5678']
+                            class_val = digits[0] if digits else default_class
+
+                        if not name:
+                            # Skip entirely empty rows
+                            if not gr_no and not sr_no and not mobile:
+                                continue
+                            errors.append(f"Row {row_idx}: {_('Student name is required')}")
                             continue
 
-                        student = Student(
+                        # Format Student ID / GR Number
+                        if gr_no:
+                            stu_id = gr_no.upper()
+                            # If only numeric, prefix with STD (e.g. 8003 -> STD8003)
+                            if stu_id.isdigit():
+                                stu_id = f"STD{stu_id}"
+                        elif sr_no:
+                            stu_id = f"STD{class_val}{str(sr_no).zfill(3)}"
+                        else:
+                            stu_id = f"STD{class_val}{str(row_idx).zfill(3)}"
+
+                        joining_date = parse_flex_date(dob_str)
+
+                        # Create or Update Student
+                        student, is_created = Student.objects.update_or_create(
                             student_id=stu_id,
-                            name=row['name'],
-                            parent_name=row['parent_name'],
-                            parent_mobile=row['parent_mobile'],
-                            email=row.get('email', ''),
-                            phone=row['phone'],
-                            class_field=row['class_field'],
-                            address=row['address'],
-                            joining_date=row['joining_date'],
+                            defaults={
+                                'name': name,
+                                'parent_name': parent_name or None,
+                                'parent_mobile': mobile or '',
+                                'phone': mobile or '',
+                                'email': email or None,
+                                'class_field': class_val,
+                                'address': address or '',
+                                'joining_date': joining_date,
+                                'status': 'active',
+                            }
                         )
-                        student.full_clean()
-                        student.save()
-                        Progress.objects.create(student=student)
-                        created_count += 1
+
+                        # Auto-create User account for Student Portal Login if not present
+                        if not student.user:
+                            user_uname = student.student_id
+                            existing_user = User.objects.filter(username=user_uname).first()
+                            if not existing_user:
+                                new_u = User.objects.create_user(
+                                    username=user_uname,
+                                    password=student.student_id,  # Default password = Student ID
+                                    first_name=student.name[:30],
+                                )
+                                student.user = new_u
+                                student.save(update_fields=['user'])
+                            else:
+                                student.user = existing_user
+                                student.save(update_fields=['user'])
+
+                        Progress.objects.get_or_create(student=student)
+
+                        if is_created:
+                            created_count += 1
+                        else:
+                            updated_count += 1
+
                     except Exception as e:
-                        errors.append(f"Row {reader.line_num}: {str(e)}")
+                        errors.append(f"Row {row_idx}: {str(e)}")
 
-                if created_count > 0:
-                    messages.success(request, f'{created_count} {_("students imported successfully.")}')
+                if created_count > 0 or updated_count > 0:
+                    messages.success(
+                        request,
+                        f'✅ {created_count} {_("new students added")}, {updated_count} {_("students updated successfully.")}'
+                    )
 
-                for error in errors:
+                for error in errors[:10]:
                     messages.warning(request, error)
 
                 return redirect('student_list')
 
             except Exception as e:
-                messages.error(request, f'{_("Error reading file:")} {str(e)}')
+                messages.error(request, f'{_("Error reading CSV file:")} {str(e)}')
     else:
         form = CSVImportForm()
 
     return render(request, 'students/csv_import.html', {'form': form})
+
 
 
 # ---------------------------------------------------------------------------
