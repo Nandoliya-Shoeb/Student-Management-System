@@ -396,6 +396,22 @@ def student_list(request):
     }
     current_class_name = class_names.get(class_filter, '')
 
+    # Tabs: (value, label, active_color)
+    class_tab_data = [
+        ('5',   'Std 5 (ધોરણ ૫)', '#6366f1'),
+        ('6',   'Std 6 (ધોરણ ૬)', '#2563eb'),
+        ('7',   'Std 7 (ધોરણ ૭)', '#d97706'),
+        ('8',   'Std 8 (ધોરણ ૮)', '#16a34a'),
+        ('all', 'All (બધા ધોરણ)',  '#64748b'),
+    ]
+    # Cards: (value, label, border_color, icon)
+    class_card_data = [
+        ('5', 'ધોરણ ૫  (Grade 5)', '#6366f1', 'fas fa-5'),
+        ('6', 'ધોરણ ૬  (Grade 6)', '#2563eb', 'fas fa-6'),
+        ('7', 'ધોરણ ૭  (Grade 7)', '#d97706', 'fas fa-7'),
+        ('8', 'ધોરણ ૮  (Grade 8)', '#16a34a', 'fas fa-8'),
+    ]
+
     context = {
         'students': students_page,
         'show_students': show_students,
@@ -404,6 +420,8 @@ def student_list(request):
         'status_filter': status_filter,
         'class_counts': class_counts,
         'current_class_name': current_class_name,
+        'class_tab_data': class_tab_data,
+        'class_card_data': class_card_data,
     }
     return render(request, 'students/list.html', context)
 
@@ -593,6 +611,130 @@ def student_bulk_delete(request):
         messages.success(request, f'✅ {count} {_("વિદ્યાર્થીઓ સફળતાપૂર્વક ડિલીટ થઈ ગયા.")}')
 
     return redirect('student_list')
+
+
+@login_required(login_url='login')
+def student_export_excel(request):
+    """Export students to Excel in the school register format: SR.NO, GR.NO, STUDENT NAME, DOB, ADDRESS, MOBAIL NO."""
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    class_filter = request.GET.get('class', '').strip()
+    search_query = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    base_qs = Student.objects.select_related('user').all()
+
+    if search_query:
+        base_qs = base_qs.filter(
+            Q(name__icontains=search_query) | Q(student_id__icontains=search_query)
+        )
+    if class_filter and class_filter != 'all':
+        base_qs = base_qs.filter(class_field=class_filter)
+    if status_filter:
+        base_qs = base_qs.filter(status=status_filter)
+
+    # Numeric sort
+    try:
+        from django.db.models.functions import Cast
+        base_qs = base_qs.annotate(num_id=Cast('student_id', IntegerField())).order_by('num_id')
+    except Exception:
+        base_qs = base_qs.order_by('student_id')
+
+    students = list(base_qs)
+
+    # Build filename
+    class_names = {'5': 'Grade5', '6': 'Grade6', '7': 'Grade7', '8': 'Grade8', 'all': 'All'}
+    class_label = class_names.get(class_filter, 'All')
+    filename = f'Students_{class_label}_Register.xlsx'
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f'{class_label} Register'
+
+    # ── Header row styling ──
+    header_fill = PatternFill(start_color='1E3A5F', end_color='1E3A5F', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left_align = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin'),
+    )
+
+    # ── School title ──
+    ws.merge_cells('A1:G1')
+    title_cell = ws['A1']
+    school_label = f'Students Register — {class_label}' if class_filter else 'Students Register — All Classes'
+    title_cell.value = school_label
+    title_cell.font = Font(bold=True, size=14, color='1E3A5F')
+    title_cell.alignment = center_align
+    ws.row_dimensions[1].height = 30
+
+    # ── Column headers ──
+    headers = ['SR .NO', 'GR.NO', 'STUDENT NAME', 'DOB', 'ADDRESS', 'MOBAIL NO', 'CLASS']
+    ws.append(headers)
+    header_row = ws[2]
+    for cell in header_row:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = thin_border
+    ws.row_dimensions[2].height = 22
+
+    # ── Data rows ──
+    alt_fill = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
+    for i, student in enumerate(students, start=1):
+        dob = ''
+        if student.joining_date:
+            try:
+                dob = student.joining_date.strftime('%d/%m/%Y')
+            except Exception:
+                dob = str(student.joining_date)
+
+        mobile = student.phone or student.parent_mobile or ''
+        row = [
+            i,
+            student.student_id,
+            student.name,
+            dob,
+            student.address or '',
+            mobile,
+            student.get_class_field_display(),
+        ]
+        ws.append(row)
+        row_num = i + 2  # +2 for title and header rows
+        for col_idx, cell in enumerate(ws[row_num], start=1):
+            cell.border = thin_border
+            cell.alignment = left_align if col_idx > 2 else center_align
+            if i % 2 == 0:
+                cell.fill = alt_fill
+
+    # ── Column widths ──
+    col_widths = [8, 10, 30, 14, 35, 16, 12]
+    for idx, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
+    # ── Freeze top 2 rows ──
+    ws.freeze_panes = 'A3'
+
+    # ── Serve file ──
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required(login_url='login')

@@ -5,318 +5,324 @@
 {% block page_title %}{% trans "School Students Register" %}{% endblock %}
 
 {% block content %}
-<!-- ─── Header & Actions ─────────────────────────────────────── -->
-<div class="d-flex justify-between items-center flex-wrap gap-3 mb-4">
-  <div>
-    <h1 class="fs-xl fw-800 mb-1">
-      <i class="fas fa-address-book text-primary me-2"></i>{% trans "Students Register (વિદ્યાર્થી રજીસ્ટર)" %}
-    </h1>
-    <div class="text-muted fs-sm">{% trans "Class-wise student directory, GR records, and login access" %}</div>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm">
-      <i class="fas fa-user-plus me-1"></i>{% trans "Add Student" %}
-    </a>
-    <a href="{% url 'student_csv_import' %}" class="btn btn-outline btn-sm">
-      <i class="fas fa-file-excel text-success me-1"></i>{% trans "Import Excel / CSV" %}
-    </a>
+
+<!-- ── Hero Header ───────────────────────────────────────────── -->
+<div class="mb-5 rounded-3 p-4" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%); color: #fff; box-shadow: 0 4px 24px rgba(37,99,235,0.18);">
+  <div class="d-flex justify-between items-center flex-wrap gap-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <div style="width:40px;height:40px;background:rgba(255,255,255,0.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;">
+          <i class="fas fa-address-book"></i>
+        </div>
+        <h1 class="fs-xl fw-800 mb-0" style="color:#fff;">Students Register <span style="opacity:.75;font-weight:400;font-size:0.9em;">(વિદ્યાર્થી રજીસ્ટર)</span></h1>
+      </div>
+      <div style="opacity:.8;font-size:0.85rem;">Class-wise GR records, register &amp; login management</div>
+      <!-- Quick stats -->
+      <div class="d-flex flex-wrap gap-3 mt-3">
+        {% for c, count in class_counts.items %}{% if c != 'total' %}
+        <div style="background:rgba(255,255,255,0.12);border-radius:8px;padding:6px 14px;font-size:0.82rem;">
+          <span style="opacity:.75;">Std {{ c }}</span>
+          <strong style="margin-left:6px;">{{ count }}</strong>
+        </div>
+        {% endif %}{% endfor %}
+        <div style="background:rgba(255,255,255,0.2);border-radius:8px;padding:6px 14px;font-size:0.82rem;border:1px solid rgba(255,255,255,0.3);">
+          <i class="fas fa-users me-1"></i> Total <strong>{{ class_counts.total }}</strong>
+        </div>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'student_create' %}" class="btn btn-sm fw-600" style="background:#fff;color:#1e3a5f;border:none;">
+        <i class="fas fa-user-plus me-1"></i> Add Student
+      </a>
+      <a href="{% url 'student_csv_import' %}" class="btn btn-sm fw-600" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.35);">
+        <i class="fas fa-file-excel me-1"></i> Import Excel
+      </a>
+      <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}" class="btn btn-sm fw-600" style="background:#10b981;color:#fff;border:none;">
+        <i class="fas fa-file-download me-1"></i> Export Excel
+      </a>
+    </div>
   </div>
 </div>
 
-<!-- ─── Class Selection Navigation Tabs ──────────────────────── -->
-<div class="d-flex flex-wrap gap-2 mb-4 p-2 rounded-3 bg-white border shadow-sm">
-  <a href="{% url 'student_list' %}?class=5" class="btn btn-sm {% if class_filter == '5' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
-    <i class="fas fa-layer-group me-1"></i> ધોરણ ૫ (Grade 5)
-    <span class="badge {% if class_filter == '5' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">{{ class_counts.5 }}</span>
+<!-- ── Class Tabs ─────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap gap-2 mb-4 p-2 rounded-3" style="background:#f1f5f9;border:1px solid #e2e8f0;">
+  {% for val, label, color in class_tab_data %}
+  <a href="{% url 'student_list' %}?class={{ val }}"
+     class="d-flex align-items-center gap-2 px-3 py-2 rounded-2 text-decoration-none fw-600 fs-xs"
+     style="{% if class_filter == val %}background:{{ color }};color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.12);{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}transition:all 0.15s;">
+    <i class="fas fa-layer-group" style="font-size:0.8rem;"></i>
+    {{ label }}
+    <span class="fw-700" style="{% if class_filter == val %}background:rgba(255,255,255,0.25);{% else %}background:#f1f5f9;{% endif %}padding:1px 7px;border-radius:20px;font-size:0.78rem;">
+      {% if val == '5' %}{{ class_counts.5 }}{% elif val == '6' %}{{ class_counts.6 }}{% elif val == '7' %}{{ class_counts.7 }}{% elif val == '8' %}{{ class_counts.8 }}{% elif val == 'all' %}{{ class_counts.total }}{% endif %}
+    </span>
   </a>
-
-  <a href="{% url 'student_list' %}?class=6" class="btn btn-sm {% if class_filter == '6' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
-    <i class="fas fa-layer-group me-1"></i> ધોરણ ૬ (Grade 6)
-    <span class="badge {% if class_filter == '6' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">{{ class_counts.6 }}</span>
-  </a>
-
-  <a href="{% url 'student_list' %}?class=7" class="btn btn-sm {% if class_filter == '7' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
-    <i class="fas fa-layer-group me-1"></i> ધોરણ ૭ (Grade 7)
-    <span class="badge {% if class_filter == '7' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">{{ class_counts.7 }}</span>
-  </a>
-
-  <a href="{% url 'student_list' %}?class=8" class="btn btn-sm {% if class_filter == '8' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
-    <i class="fas fa-layer-group me-1"></i> ધોરણ ૮ (Grade 8)
-    <span class="badge {% if class_filter == '8' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">{{ class_counts.8 }}</span>
-  </a>
-
-  <a href="{% url 'student_list' %}?class=all" class="btn btn-sm {% if class_filter == 'all' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
-    <i class="fas fa-users me-1"></i> {% trans "All Students (બધા ધોરણ)" %}
-    <span class="badge {% if class_filter == 'all' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">{{ class_counts.total }}</span>
-  </a>
+  {% endfor %}
 </div>
 
-<!-- ─── Search & Status Filter Bar ───────────────────────────── -->
-<div class="card mb-4">
+<!-- ── Search & Filter Bar ───────────────────────────────────── -->
+<div class="card mb-4 border-0 shadow-sm">
   <div class="card-body p-3">
     <form method="GET" class="d-flex flex-wrap gap-2 items-center">
-      <div style="flex: 2; min-width: 200px;">
-        <input type="text" name="search" class="form-control" placeholder="{% trans 'Search by student name or GR.NO...' %}" value="{{ search_query }}">
+      <div style="flex:2;min-width:220px;position:relative;">
+        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:0.85rem;"></i>
+        <input type="text" name="search" class="form-control" style="padding-left:34px;" placeholder="Search by name or GR.NO…" value="{{ search_query }}">
       </div>
       <input type="hidden" name="class" value="{{ class_filter }}">
-      <div style="flex: 1; min-width: 140px;">
+      <div style="flex:1;min-width:140px;">
         <select name="status" class="form-select">
-          <option value="">{% trans "All Status (બધી સ્થિતિ)" %}</option>
-          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{% trans "Active Only" %}</option>
-          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>{% trans "Inactive Only" %}</option>
+          <option value="">All Status</option>
+          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
         </select>
       </div>
-      <div>
+      <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary btn-sm">
-          <i class="fas fa-search me-1"></i>{% trans "Search / ફિલ્ટર" %}
+          <i class="fas fa-search me-1"></i>Search
         </button>
         {% if search_query or class_filter or status_filter %}
-          <a href="{% url 'student_list' %}" class="btn btn-ghost btn-sm">{% trans "Clear / રીસેટ" %}</a>
+          <a href="{% url 'student_list' %}" class="btn btn-outline btn-sm">
+            <i class="fas fa-times me-1"></i>Clear
+          </a>
+        {% endif %}
+        {% if show_students %}
+        <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}"
+           class="btn btn-sm fw-600" style="background:#10b981;color:#fff;border:none;white-space:nowrap;"
+           title="Export current view to Excel">
+          <i class="fas fa-file-excel me-1"></i> Export <span class="d-none d-md-inline">Excel</span>
+        </a>
         {% endif %}
       </div>
     </form>
   </div>
 </div>
 
-<!-- ─── When No Class is Selected Yet (Class Choice View) ────── -->
+<!-- ── No Class Selected — Show Class Selector Cards ─────────── -->
 {% if not show_students %}
-  <div class="card p-4 text-center mb-4" style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border: 1px dashed #93c5fd;">
-    <div style="max-width: 600px; margin: 0 auto;">
-      <div style="width: 64px; height: 64px; border-radius: 50%; background: #dbeafe; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; margin: 0 auto 16px;">
-        <i class="fas fa-book-reader"></i>
-      </div>
-      <h2 class="fs-lg fw-800 text-dark mb-2">{% trans "કૃપા કરીને રજીસ્ટર જોવા માટે ધોરણ પસંદ કરો" %}</h2>
-      <p class="fs-xs text-muted mb-4">
-        દરેક ધોરણનું રજીસ્ટર અલગ-અલગ છે અને તેમાં SR.NO ૧ થી શરૂ થાય છે. તમે જે ધોરણ પર ક્લિક કરશો તે જ ધોરણનું રજીસ્ટર ખૂલશે.
-      </p>
-
-      <div class="d-grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); text-align: left;">
-        <a href="{% url 'student_list' %}?class=5" class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-white border text-decoration-none shadow-sm" style="transition: transform 0.2s;">
-          <div>
-            <div class="fw-800 text-dark">ધોરણ ૫ (Grade 5)</div>
-            <div class="fs-xs text-muted">{{ class_counts.5 }} વિદ્યાર્થીઓ</div>
-          </div>
-          <span class="btn btn-outline btn-xs">&rarr; ખોલો</span>
-        </a>
-
-        <a href="{% url 'student_list' %}?class=6" class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-white border text-decoration-none shadow-sm" style="transition: transform 0.2s;">
-          <div>
-            <div class="fw-800 text-dark">ધોરણ ૬ (Grade 6)</div>
-            <div class="fs-xs text-muted">{{ class_counts.6 }} વિદ્યાર્થીઓ</div>
-          </div>
-          <span class="btn btn-outline btn-xs">&rarr; ખોલો</span>
-        </a>
-
-        <a href="{% url 'student_list' %}?class=7" class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-white border text-decoration-none shadow-sm" style="transition: transform 0.2s;">
-          <div>
-            <div class="fw-800 text-dark">ધોરણ ૭ (Grade 7)</div>
-            <div class="fs-xs text-muted">{{ class_counts.7 }} વિદ્યાર્થીઓ</div>
-          </div>
-          <span class="btn btn-outline btn-xs">&rarr; ખોલો</span>
-        </a>
-
-        <a href="{% url 'student_list' %}?class=8" class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-white border text-decoration-none shadow-sm" style="transition: transform 0.2s;">
-          <div>
-            <div class="fw-800 text-dark">ધોરણ ૮ (Grade 8)</div>
-            <div class="fs-xs text-muted">{{ class_counts.8 }} વિદ્યાર્થીઓ</div>
-          </div>
-          <span class="btn btn-outline btn-xs">&rarr; ખોલો</span>
-        </a>
-      </div>
-    </div>
+<div style="text-align:center;padding:40px 0 20px;">
+  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#2563eb;margin:0 auto 20px;">
+    <i class="fas fa-book-reader"></i>
   </div>
+  <h2 class="fs-lg fw-800 text-dark mb-2">ધોરણ (Class) પસંદ કરો</h2>
+  <p class="fs-xs text-muted mb-5" style="max-width:480px;margin:0 auto 32px;">
+    દરેક ધોરણ અલગ-અલગ રજીસ્ટર ધરાવે છે. SR.NO ૧ થી શરૂ થાય છે. ઉપર ટેબ પર ક્લિક કરો અથવા નીચે ધોરણ પસંદ કરો.
+  </p>
+</div>
 
-<!-- ─── When a Class / Search is Active: Show Register Table ──── -->
+<div class="d-grid gap-4 mb-4" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));">
+  {% for val, label, color, icon in class_card_data %}
+  <a href="{% url 'student_list' %}?class={{ val }}" class="text-decoration-none" style="outline:none;">
+    <div class="rounded-3 p-4 d-flex align-items-center gap-3 bg-white border shadow-sm"
+         style="border-left:5px solid {{ color }} !important;transition:transform 0.15s,box-shadow 0.15s;"
+         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)';"
+         onmouseout="this.style.transform='';this.style.boxShadow='';">
+      <div style="width:48px;height:48px;border-radius:12px;background:{{ color }}20;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:{{ color }};flex-shrink:0;">
+        <i class="{{ icon }}"></i>
+      </div>
+      <div style="flex:1;">
+        <div class="fw-800 text-dark">{{ label }}</div>
+        <div class="fs-xs text-muted mt-1">
+          {% if val == '5' %}{{ class_counts.5 }}{% elif val == '6' %}{{ class_counts.6 }}{% elif val == '7' %}{{ class_counts.7 }}{% elif val == '8' %}{{ class_counts.8 }}{% endif %} students
+        </div>
+      </div>
+      <div style="color:{{ color }};font-size:1.1rem;"><i class="fas fa-chevron-right"></i></div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- ── Students Found — Show Register Table ───────────────────── -->
 {% else %}
-
   {% if students %}
-    <form method="POST" action="{% url 'student_bulk_delete' %}" id="bulkDeleteForm">
-      {% csrf_token %}
+  <form method="POST" action="{% url 'student_bulk_delete' %}" id="bulkDeleteForm">
+    {% csrf_token %}
 
-      <!-- Active Register Subheader -->
-      <div class="d-flex justify-between items-center mb-3">
+    <!-- Active register sub-header -->
+    <div class="d-flex justify-between items-center mb-3 flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <div class="fw-700 fs-base text-dark">
+          <i class="fas fa-clipboard-list text-primary me-1"></i>
+          {% if current_class_name %}{{ current_class_name }}{% else %}Search Results{% endif %} Register
+        </div>
+        <span class="badge badge-muted fs-xs">{{ students.paginator.count }} students</span>
+      </div>
+      <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}"
+         class="btn btn-sm fw-600" style="background:#10b981;color:#fff;border:none;">
+        <i class="fas fa-file-excel me-1"></i> Download Excel Register
+      </a>
+    </div>
+
+    <!-- Bulk Delete Toolbar -->
+    <div id="bulkActionToolbar" style="display:none;background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:12px 16px;margin-bottom:12px;">
+      <div class="d-flex justify-between items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
-          <span class="badge badge-primary px-3 py-1 fs-xs fw-700">
-            <i class="fas fa-clipboard-list me-1"></i>
-            {% if current_class_name %}{{ current_class_name }} રજીસ્ટર{% else %}સર્ચ પરિણામો{% endif %}
-          </span>
-          <span class="fs-xs text-muted">કુલ: <strong>{{ students.paginator.count }}</strong> વિદ્યાર્થીઓ</span>
+          <span class="badge badge-danger" id="selectedBadge">0 Selected</span>
+          <span class="fs-xs text-muted">વિદ્યાર્થીઓ પસંદ છે</span>
         </div>
-      </div>
-
-      <!-- Bulk Action Toolbar -->
-      <div id="bulkActionToolbar" class="card mb-3 p-3" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px;">
-        <div class="d-flex justify-between items-center flex-wrap gap-2">
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge badge-danger px-2 py-1 fs-xs" id="selectedBadge">0 Selected</span>
-            <span class="fs-xs text-muted">{% trans "વિદ્યાર્થીઓ પસંદ કરેલ છે" %}</span>
-          </div>
-          <div class="d-flex gap-2">
-            <button type="button" class="btn btn-ghost btn-sm text-muted" onclick="deselectAll()">
-              {% trans "Cancel / રદ કરો" %}
-            </button>
-            <button type="button" class="btn btn-danger btn-sm fw-600" onclick="confirmBulkDelete()">
-              <i class="fas fa-trash-alt me-1"></i> {% trans "Delete Selected (પસંદ કરેલા ડિલીટ કરો)" %}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- School Register Table matching Excel file -->
-      <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-          <div class="table-wrapper">
-            <table class="table mb-0" style="font-size: 0.875rem;">
-              <thead>
-                <tr style="background: #f1f5f9; color: #1e293b; border-bottom: 2px solid #cbd5e1;">
-                  <th style="width: 40px; text-align: center; padding: 10px 8px;">
-                    <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="{% trans 'Select All / બધા પસંદ કરો' %}" style="cursor: pointer; width: 16px; height: 16px;">
-                  </th>
-                  <th style="width: 60px; font-weight: 800; padding: 10px 8px;">SR .NO</th>
-                  <th style="font-weight: 800; padding: 10px 12px; color: #2563eb;">GR.NO</th>
-                  <th style="font-weight: 800; padding: 10px 12px;">STUDENT NAME</th>
-                  <th style="font-weight: 800; padding: 10px 12px;">DOB</th>
-                  <th style="font-weight: 800; padding: 10px 12px;">ADDRESS</th>
-                  <th style="font-weight: 800; padding: 10px 12px; color: #059669;">MOBAIL NO</th>
-                  <th class="text-right" style="font-weight: 800; padding: 10px 12px;">{% trans "ACTIONS" %}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for student in students %}
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="text-align: center; padding: 10px 8px;">
-                    <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox" onchange="updateSelectionUI()" style="cursor: pointer; width: 16px; height: 16px;">
-                  </td>
-                  <td class="text-muted fw-700 font-mono" style="padding: 10px 8px;">
-                    {{ forloop.counter0|add:students.start_index }}
-                  </td>
-                  <td style="padding: 10px 12px;">
-                    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-family: monospace; font-size: 0.85rem;">
-                      {{ student.student_id }}
-                    </span>
-                  </td>
-                  <td style="padding: 10px 12px;">
-                    <div class="fw-700 text-dark">{{ student.name }}</div>
-                    {% if class_filter == 'all' %}
-                      <div class="fs-xs text-muted">{{ student.get_class_field_display }}</div>
-                    {% endif %}
-                  </td>
-                  <td style="padding: 10px 12px; color: #475569; font-family: monospace;">
-                    {{ student.joining_date|date:"d/m/Y"|default:"—" }}
-                  </td>
-                  <td style="padding: 10px 12px; color: #334155; max-width: 200px;">
-                    {{ student.address|default:"—" }}
-                  </td>
-                  <td style="padding: 10px 12px; font-weight: 600; color: #059669; font-family: monospace;">
-                    {{ student.phone|default:student.parent_mobile|default:"—" }}
-                  </td>
-                  <td class="text-right" style="padding: 10px 12px;">
-                    <a href="{% url 'student_detail' student.pk %}" class="btn btn-ghost btn-xs text-primary" title="{% trans 'View Profile' %}">
-                      <i class="fas fa-eye"></i>
-                    </a>
-                    <a href="{% url 'student_edit' student.pk %}" class="btn btn-ghost btn-xs text-secondary" title="{% trans 'Edit' %}">
-                      <i class="fas fa-edit"></i>
-                    </a>
-                    <a href="{% url 'student_reset_password' student.pk %}" class="btn btn-ghost btn-xs text-warning" title="{% trans 'Password (GR.NO)' %}">
-                      <i class="fas fa-key"></i>
-                    </a>
-                    <a href="{% url 'student_delete' student.pk %}" class="btn btn-ghost btn-xs text-danger" title="{% trans 'Delete' %}">
-                      <i class="fas fa-trash"></i>
-                    </a>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </form>
-
-    <script>
-      function toggleSelectAll(master) {
-        const checkboxes = document.querySelectorAll('.student-checkbox');
-        checkboxes.forEach(cb => cb.checked = master.checked);
-        updateSelectionUI();
-      }
-
-      function deselectAll() {
-        const master = document.getElementById('selectAll');
-        if (master) master.checked = false;
-        const checkboxes = document.querySelectorAll('.student-checkbox');
-        checkboxes.forEach(cb => cb.checked = false);
-        updateSelectionUI();
-      }
-
-      function updateSelectionUI() {
-        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-        const count = checkboxes.length;
-        const toolbar = document.getElementById('bulkActionToolbar');
-        const badge = document.getElementById('selectedBadge');
-        
-        if (count > 0) {
-          toolbar.style.display = 'block';
-          badge.innerText = count + ' Selected';
-        } else {
-          toolbar.style.display = 'none';
-        }
-
-        const all = document.querySelectorAll('.student-checkbox');
-        const master = document.getElementById('selectAll');
-        if (master && all.length > 0) {
-          master.checked = (count === all.length);
-        }
-      }
-
-      function confirmBulkDelete() {
-        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
-        const count = checkboxes.length;
-        if (count === 0) {
-          alert('કૃપા કરીને ડિલીટ કરવા માટે ઓછામાં ઓછો એક વિદ્યાર્થી પસંદ કરો.');
-          return;
-        }
-        if (confirm(`શું તમે ખરેખર પસંદ કરેલા ${count} વિદ્યાર્થીઓને કાયમ માટે Delete કરવા માંગો છો?`)) {
-          document.getElementById('bulkDeleteForm').submit();
-        }
-      }
-    </script>
-
-    <!-- Pagination -->
-    {% if students.has_other_pages %}
-      <div class="pagination mt-4 justify-center">
-        {% if students.has_previous %}
-          <a class="page-link" href="?page=1&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&laquo;</a>
-          <a class="page-link" href="?page={{ students.previous_page_number }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&lsaquo;</a>
-        {% endif %}
-
-        {% for num in students.paginator.page_range %}
-          <a class="page-link {% if students.number == num %}active{% endif %}" href="?page={{ num }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">{{ num }}</a>
-        {% endfor %}
-
-        {% if students.has_next %}
-          <a class="page-link" href="?page={{ students.next_page_number }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&rsaquo;</a>
-          <a class="page-link" href="?page={{ students.paginator.num_pages }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&raquo;</a>
-        {% endif %}
-      </div>
-    {% endif %}
-
-  {% else %}
-    <div class="card p-5 text-center">
-      <div class="empty-state">
-        <div class="empty-icon"><i class="fas fa-folder-open text-muted"></i></div>
-        <div class="empty-title fs-md fw-700">{% trans "આ ધોરણમાં હજુ સુધી કોઈ વિદ્યાર્થીઓ નથી." %}</div>
-        <div class="empty-desc fs-xs text-muted mb-3">{% trans "તમે Excel ફાઇલ અપલોડ કરીને અથવા મેન્યુઅલી વિદ્યાર્થીઓ ઉમેરી શકો છો." %}</div>
-        <div class="d-flex justify-center gap-2">
-          <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm">
-            <i class="fas fa-user-plus me-1"></i>{% trans "Add Student" %}
-          </a>
-          <a href="{% url 'student_csv_import' %}" class="btn btn-outline btn-sm">
-            <i class="fas fa-file-excel me-1"></i>{% trans "Import Excel" %}
-          </a>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-ghost btn-sm text-muted" onclick="deselectAll()">
+            <i class="fas fa-times me-1"></i>Cancel
+          </button>
+          <button type="button" class="btn btn-sm fw-700" style="background:#ef4444;color:#fff;" onclick="confirmBulkDelete()">
+            <i class="fas fa-trash-alt me-1"></i>Delete Selected
+          </button>
         </div>
       </div>
     </div>
+
+    <!-- ── Register Table ── -->
+    <div class="card border-0 shadow-sm overflow-hidden">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+          <thead>
+            <tr style="background:linear-gradient(90deg,#1e3a5f,#2563eb);color:#fff;">
+              <th style="padding:12px 10px;text-align:center;width:42px;">
+                <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" style="cursor:pointer;width:16px;height:16px;accent-color:#fff;">
+              </th>
+              <th style="padding:12px 8px;text-align:center;width:58px;font-weight:700;letter-spacing:.5px;">SR .NO</th>
+              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;color:#93c5fd;">GR.NO</th>
+              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;">STUDENT NAME</th>
+              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;">DOB</th>
+              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;">ADDRESS</th>
+              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;color:#6ee7b7;">MOBAIL NO</th>
+              {% if class_filter == 'all' or not class_filter %}<th style="padding:12px 10px;font-weight:700;">CLASS</th>{% endif %}
+              <th style="padding:12px 12px;font-weight:700;text-align:right;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+            <tr style="border-bottom:1px solid #f1f5f9;{% if forloop.counter|divisibleby:2 %}background:#f8fafc;{% else %}background:#fff;{% endif %}transition:background 0.1s;"
+                onmouseover="this.style.background='#eff6ff';" onmouseout="this.style.background='{% if forloop.counter|divisibleby:2 %}#f8fafc{% else %}#fff{% endif %}';">
+
+              <td style="padding:10px;text-align:center;">
+                <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox"
+                       onchange="updateSelectionUI()" style="cursor:pointer;width:16px;height:16px;accent-color:#2563eb;">
+              </td>
+
+              <td style="padding:10px 8px;text-align:center;">
+                <span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:20px;font-weight:700;font-size:0.8rem;font-family:monospace;">
+                  {{ forloop.counter0|add:students.start_index }}
+                </span>
+              </td>
+
+              <td style="padding:10px 12px;">
+                <span style="background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:6px;font-weight:800;font-family:monospace;font-size:0.9rem;letter-spacing:.5px;">
+                  {{ student.student_id }}
+                </span>
+              </td>
+
+              <td style="padding:10px 12px;">
+                <div class="fw-700" style="color:#1e293b;">{{ student.name }}</div>
+                <div style="font-size:0.75rem;color:#94a3b8;margin-top:2px;">
+                  {% if student.user %}<i class="fas fa-circle" style="color:#10b981;font-size:0.55rem;margin-right:3px;"></i>Login Active{% else %}<i class="fas fa-circle" style="color:#f59e0b;font-size:0.55rem;margin-right:3px;"></i>No Login{% endif %}
+                </div>
+              </td>
+
+              <td style="padding:10px 12px;font-family:monospace;color:#475569;font-size:0.85rem;">
+                {{ student.joining_date|date:"d/m/Y"|default:"—" }}
+              </td>
+
+              <td style="padding:10px 12px;color:#475569;font-size:0.85rem;max-width:180px;">
+                {{ student.address|default:"—"|truncatechars:35 }}
+              </td>
+
+              <td style="padding:10px 12px;font-family:monospace;font-weight:700;color:#059669;font-size:0.875rem;">
+                {{ student.phone|default:student.parent_mobile|default:"—" }}
+              </td>
+
+              {% if class_filter == 'all' or not class_filter %}
+              <td style="padding:10px;">
+                <span class="badge badge-primary" style="font-size:0.75rem;">{{ student.get_class_field_display }}</span>
+              </td>
+              {% endif %}
+
+              <td style="padding:10px 12px;text-align:right;white-space:nowrap;">
+                <a href="{% url 'student_detail' student.pk %}" class="btn btn-ghost btn-xs" title="View Profile" style="color:#2563eb;">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <a href="{% url 'student_edit' student.pk %}" class="btn btn-ghost btn-xs" title="Edit" style="color:#6366f1;">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'student_reset_password' student.pk %}" class="btn btn-ghost btn-xs" title="Password (GR.NO)" style="color:#d97706;">
+                  <i class="fas fa-key"></i>
+                </a>
+                <a href="{% url 'student_delete' student.pk %}" class="btn btn-ghost btn-xs" title="Delete" style="color:#ef4444;">
+                  <i class="fas fa-trash"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </form>
+
+  <!-- Pagination -->
+  {% if students.has_other_pages %}
+  <div class="pagination mt-4 justify-center">
+    {% if students.has_previous %}
+      <a class="page-link" href="?page=1&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&laquo;</a>
+      <a class="page-link" href="?page={{ students.previous_page_number }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&lsaquo;</a>
+    {% endif %}
+    {% for num in students.paginator.page_range %}
+      <a class="page-link {% if students.number == num %}active{% endif %}" href="?page={{ num }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">{{ num }}</a>
+    {% endfor %}
+    {% if students.has_next %}
+      <a class="page-link" href="?page={{ students.next_page_number }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&rsaquo;</a>
+      <a class="page-link" href="?page={{ students.paginator.num_pages }}&search={{ search_query }}&class={{ class_filter }}&status={{ status_filter }}">&raquo;</a>
+    {% endif %}
+  </div>
   {% endif %}
 
+  {% else %}
+  <!-- Empty state -->
+  <div class="card p-5 text-center border-0 shadow-sm">
+    <div style="width:64px;height:64px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#d97706;margin:0 auto 16px;">
+      <i class="fas fa-folder-open"></i>
+    </div>
+    <div class="fw-700 fs-md mb-1">આ ધોરણ/ફિલ્ટર માટે વિદ્યાર્થી મળ્યા નહીં.</div>
+    <div class="fs-xs text-muted mb-4">Excel import અથવા Add Student ઉપયોગ કરીને ઉમેરો.</div>
+    <div class="d-flex justify-center gap-2">
+      <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm">
+        <i class="fas fa-user-plus me-1"></i>Add Student
+      </a>
+      <a href="{% url 'student_csv_import' %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-file-excel me-1"></i>Import Excel
+      </a>
+    </div>
+  </div>
+  {% endif %}
 {% endif %}
+
+<!-- ── JavaScript ─────────────────────────────────────────────── -->
+<script>
+  function toggleSelectAll(master) {
+    document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = master.checked);
+    updateSelectionUI();
+  }
+  function deselectAll() {
+    const m = document.getElementById('selectAll');
+    if (m) m.checked = false;
+    document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+    updateSelectionUI();
+  }
+  function updateSelectionUI() {
+    const checked = document.querySelectorAll('.student-checkbox:checked');
+    const count = checked.length;
+    const toolbar = document.getElementById('bulkActionToolbar');
+    const badge = document.getElementById('selectedBadge');
+    if (toolbar) toolbar.style.display = count > 0 ? 'block' : 'none';
+    if (badge) badge.innerText = count + ' Selected';
+    const all = document.querySelectorAll('.student-checkbox');
+    const master = document.getElementById('selectAll');
+    if (master && all.length > 0) master.checked = count === all.length;
+  }
+  function confirmBulkDelete() {
+    const count = document.querySelectorAll('.student-checkbox:checked').length;
+    if (count === 0) { alert('Please select at least one student.'); return; }
+    if (confirm(`Are you sure you want to permanently delete ${count} selected student(s)?`)) {
+      document.getElementById('bulkDeleteForm').submit();
+    }
+  }
+</script>
 {% endblock %}
