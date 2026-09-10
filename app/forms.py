@@ -192,22 +192,23 @@ class CSVImportForm(forms.Form):
     ]
 
     csv_file = forms.FileField(
-        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv'}),
-        label=_('Select CSV / Excel File'),
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.xlsx, .xls, .csv, .txt'}),
+        label=_('Select Excel / CSV File'),
     )
     default_class = forms.ChoiceField(
         choices=CLASS_CHOICES,
-        initial='8',
+        initial='6',
         widget=forms.Select(attrs={'class': 'form-select'}),
-        label=_('Default Class / Grade (ધોરણ)'),
-        help_text=_('This class will be assigned to students if not specified in the CSV.')
+        label=_('Select Class / Grade (ધોરણ પસંદ કરો)'),
+        help_text=_('This class will be assigned to students if not specified in the file.')
     )
 
     def clean_csv_file(self):
         csv_file = self.cleaned_data['csv_file']
-        if not csv_file.name.lower().endswith(('.csv', '.txt')):
-            raise forms.ValidationError(_('Please upload a valid CSV file.'))
-        if csv_file.size > 10 * 1024 * 1024:
-            raise forms.ValidationError(_('File size exceeds 10MB limit.'))
+        valid_extensions = ('.xlsx', '.xls', '.csv', '.txt')
+        if not csv_file.name.lower().endswith(valid_extensions):
+            raise forms.ValidationError(_('Please upload a valid Excel (.xlsx, .xls) or CSV file.'))
+        if csv_file.size > 20 * 1024 * 1024:
+            raise forms.ValidationError(_('File size exceeds 20MB limit.'))
         return csv_file
 
