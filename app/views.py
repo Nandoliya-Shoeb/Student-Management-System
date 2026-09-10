@@ -342,31 +342,68 @@ def student_list(request):
     if is_student_user(request.user):
         return redirect('student_dashboard')
 
-    students = Student.objects.select_related('user').all()
+    search_query = request.GET.get('search', '').strip()
+    class_filter = request.GET.get('class', '').strip()
+    status_filter = request.GET.get('status', '').strip()
 
-    search_query = request.GET.get('search', '')
-    if search_query:
-        students = students.filter(
-            Q(name__icontains=search_query) | Q(student_id__icontains=search_query)
-        )
+    # Calculate student counts per class for tabs and cards
+    class_counts = {
+        '5': Student.objects.filter(class_field='5').count(),
+        '6': Student.objects.filter(class_field='6').count(),
+        '7': Student.objects.filter(class_field='7').count(),
+        '8': Student.objects.filter(class_field='8').count(),
+        'total': Student.objects.count(),
+    }
 
-    class_filter = request.GET.get('class', '')
-    if class_filter:
-        students = students.filter(class_field=class_filter)
+    # If no class filter and no search query, do not display mixed classes by default
+    show_students = False
+    students_page = None
 
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        students = students.filter(status=status_filter)
+    if class_filter or search_query:
+        show_students = True
+        base_qs = Student.objects.select_related('user').all()
 
-    paginator = Paginator(students, 25)
-    page_number = request.GET.get('page')
-    students_page = paginator.get_page(page_number)
+        if search_query:
+            base_qs = base_qs.filter(
+                Q(name__icontains=search_query) | Q(student_id__icontains=search_query)
+            )
+
+        if class_filter and class_filter != 'all':
+            base_qs = base_qs.filter(class_field=class_filter)
+
+        if status_filter:
+            base_qs = base_qs.filter(status=status_filter)
+
+        # Sort numerically by GR.NO
+        try:
+            from django.db.models.functions import Cast
+            from django.db.models import IntegerField
+            base_qs = base_qs.annotate(num_id=Cast('student_id', IntegerField())).order_by('num_id')
+        except Exception:
+            base_qs = base_qs.order_by('student_id')
+
+        # 100 students per page so full class register displays seamlessly
+        paginator = Paginator(base_qs, 100)
+        page_number = request.GET.get('page')
+        students_page = paginator.get_page(page_number)
+
+    class_names = {
+        '5': _('Grade 5 (ધોરણ ૫)'),
+        '6': _('Grade 6 (ધોરણ ૬)'),
+        '7': _('Grade 7 (ધોરણ ૭)'),
+        '8': _('Grade 8 (ધોરણ ૮)'),
+        'all': _('All Classes (બધા ધોરણ)'),
+    }
+    current_class_name = class_names.get(class_filter, '')
 
     context = {
         'students': students_page,
+        'show_students': show_students,
         'search_query': search_query,
         'class_filter': class_filter,
         'status_filter': status_filter,
+        'class_counts': class_counts,
+        'current_class_name': current_class_name,
     }
     return render(request, 'students/list.html', context)
 
