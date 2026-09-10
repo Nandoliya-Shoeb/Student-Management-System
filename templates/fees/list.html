@@ -2,54 +2,169 @@
 {% load i18n %}
 
 {% block title %}{% trans "Fee Management" %} — {% trans "Student Management System" %}{% endblock %}
-{% block page_title %}{% trans "Fee Management" %}{% endblock %}
+{% block page_title %}{% trans "Fee Collections & Records" %}{% endblock %}
 
 {% block content %}
+<!-- ─── Header & Actions ─────────────────────────────────────── -->
 <div class="d-flex justify-between items-center flex-wrap gap-3 mb-4">
   <div>
-    <h1 class="fs-xl fw-700">{% trans "Fee Collections" %}</h1>
-    <div class="text-muted fs-sm">{% trans "Track payments, pending dues and generate receipts" %}</div>
+    <h1 class="fs-xl fw-800 mb-1">
+      <i class="fas fa-wallet text-success me-2"></i>{% trans "Fee Collections (ફી વ્યવસ્થાપન)" %}
+    </h1>
+    <div class="text-muted fs-sm">{% trans "Track class-wise collections, pending dues, and print receipts" %}</div>
   </div>
   <div>
     <a href="{% url 'fee_create' %}" class="btn btn-primary btn-sm">
-      <i class="fas fa-plus-circle me-1"></i>{% trans "Record Fee" %}
+      <i class="fas fa-plus-circle me-1"></i>{% trans "Record Fee (ફી જમા કરો)" %}
     </a>
   </div>
 </div>
 
-<!-- Stat Cards -->
+<!-- ─── Class Navigation Tabs (ધોરણ મુજબ ટેબ્સ) ────────────────── -->
+<div class="d-flex flex-wrap gap-2 mb-4 p-2 rounded-3 bg-white border shadow-sm">
+  <a href="{% url 'fee_list' %}?class=5" class="btn btn-sm {% if class_filter == '5' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
+    <i class="fas fa-layer-group me-1"></i> ધોરણ ૫ (Grade 5)
+    <span class="badge {% if class_filter == '5' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">₹{{ class_fee_stats.5.paid }}</span>
+  </a>
+
+  <a href="{% url 'fee_list' %}?class=6" class="btn btn-sm {% if class_filter == '6' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
+    <i class="fas fa-layer-group me-1"></i> ધોરણ ૬ (Grade 6)
+    <span class="badge {% if class_filter == '6' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">₹{{ class_fee_stats.6.paid }}</span>
+  </a>
+
+  <a href="{% url 'fee_list' %}?class=7" class="btn btn-sm {% if class_filter == '7' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
+    <i class="fas fa-layer-group me-1"></i> ધોરણ ૭ (Grade 7)
+    <span class="badge {% if class_filter == '7' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">₹{{ class_fee_stats.7.paid }}</span>
+  </a>
+
+  <a href="{% url 'fee_list' %}?class=8" class="btn btn-sm {% if class_filter == '8' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
+    <i class="fas fa-layer-group me-1"></i> ધોરણ ૮ (Grade 8)
+    <span class="badge {% if class_filter == '8' %}badge-light text-primary{% else %}badge-muted{% endif %} ms-1">₹{{ class_fee_stats.8.paid }}</span>
+  </a>
+
+  <a href="{% url 'fee_list' %}" class="btn btn-sm {% if not class_filter or class_filter == 'all' %}btn-primary fw-700{% else %}btn-ghost text-muted{% endif %}" style="border-radius: 8px;">
+    <i class="fas fa-receipt me-1"></i> {% trans "All Classes (બધા ધોરણ)" %}
+  </a>
+</div>
+
+<!-- ─── Class-wise Breakdown Cards (ધોરણ મુજબ કેટલી ફી આવી) ───── -->
+<div class="card mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);">
+  <div class="card-body p-3">
+    <div class="fs-xs fw-700 text-muted uppercase mb-3">
+      <i class="fas fa-chart-pie me-1 text-primary"></i> ધોરણ મુજબ ફી વિશ્લેષણ (Class-wise Fee Breakdown)
+    </div>
+    <div class="d-grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+      
+      <!-- Grade 5 -->
+      <div class="p-3 rounded-3 bg-white border" style="border-left: 4px solid #6366f1 !important;">
+        <div class="d-flex justify-between items-center mb-1">
+          <span class="fw-700 text-dark">ધોરણ ૫ (Grade 5)</span>
+          <span class="fs-xs text-muted">{{ class_fee_stats.5.records }} Records</span>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-2">
+          <span class="text-muted">જમા થયેલ:</span>
+          <strong class="text-success">₹ {{ class_fee_stats.5.paid }}</strong>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-1">
+          <span class="text-muted">બાકી રકમ:</span>
+          <strong class="text-danger">₹ {{ class_fee_stats.5.pending }}</strong>
+        </div>
+      </div>
+
+      <!-- Grade 6 -->
+      <div class="p-3 rounded-3 bg-white border" style="border-left: 4px solid #2563eb !important;">
+        <div class="d-flex justify-between items-center mb-1">
+          <span class="fw-700 text-dark">ધોરણ ૬ (Grade 6)</span>
+          <span class="fs-xs text-muted">{{ class_fee_stats.6.records }} Records</span>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-2">
+          <span class="text-muted">જમા થયેલ:</span>
+          <strong class="text-success">₹ {{ class_fee_stats.6.paid }}</strong>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-1">
+          <span class="text-muted">બાકી રકમ:</span>
+          <strong class="text-danger">₹ {{ class_fee_stats.6.pending }}</strong>
+        </div>
+      </div>
+
+      <!-- Grade 7 -->
+      <div class="p-3 rounded-3 bg-white border" style="border-left: 4px solid #d97706 !important;">
+        <div class="d-flex justify-between items-center mb-1">
+          <span class="fw-700 text-dark">ધોરણ ૭ (Grade 7)</span>
+          <span class="fs-xs text-muted">{{ class_fee_stats.7.records }} Records</span>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-2">
+          <span class="text-muted">જમા થયેલ:</span>
+          <strong class="text-success">₹ {{ class_fee_stats.7.paid }}</strong>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-1">
+          <span class="text-muted">બાકી રકમ:</span>
+          <strong class="text-danger">₹ {{ class_fee_stats.7.pending }}</strong>
+        </div>
+      </div>
+
+      <!-- Grade 8 -->
+      <div class="p-3 rounded-3 bg-white border" style="border-left: 4px solid #16a34a !important;">
+        <div class="d-flex justify-between items-center mb-1">
+          <span class="fw-700 text-dark">ધોરણ ૮ (Grade 8)</span>
+          <span class="fs-xs text-muted">{{ class_fee_stats.8.records }} Records</span>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-2">
+          <span class="text-muted">જમા થયેલ:</span>
+          <strong class="text-success">₹ {{ class_fee_stats.8.paid }}</strong>
+        </div>
+        <div class="d-flex justify-between fs-xs mt-1">
+          <span class="text-muted">બાકી રકમ:</span>
+          <strong class="text-danger">₹ {{ class_fee_stats.8.pending }}</strong>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ─── Filtered Scope Summary Cards ─────────────────────────── -->
 <div class="stat-cards mb-4">
-  <div class="stat-card">
+  <div class="stat-card" style="border-left: 4px solid #10b981;">
     <div class="stat-icon green"><i class="fas fa-check-double"></i></div>
     <div>
-      <div class="stat-label">{% trans "Total Collected" %}</div>
+      <div class="stat-label">{% if current_class_name %}{{ current_class_name }} — {% endif %}{% trans "Collected Fees (જમા)" %}</div>
       <div class="stat-value text-success">₹ {{ total_paid }}</div>
     </div>
   </div>
 
-  <div class="stat-card">
+  <div class="stat-card" style="border-left: 4px solid #ef4444;">
     <div class="stat-icon red"><i class="fas fa-hourglass-half"></i></div>
     <div>
-      <div class="stat-label">{% trans "Total Pending" %}</div>
+      <div class="stat-label">{% if current_class_name %}{{ current_class_name }} — {% endif %}{% trans "Pending Fees (બાકી)" %}</div>
       <div class="stat-value text-danger">₹ {{ total_pending }}</div>
     </div>
   </div>
 
-  <div class="stat-card">
+  <div class="stat-card" style="border-left: 4px solid #3b82f6;">
     <div class="stat-icon blue"><i class="fas fa-receipt"></i></div>
     <div>
-      <div class="stat-label">{% trans "Total Receivables" %}</div>
+      <div class="stat-label">{% if current_class_name %}{{ current_class_name }} — {% endif %}{% trans "Total Dues (કુલ રકમ)" %}</div>
       <div class="stat-value">₹ {{ total_paid|add:total_pending }}</div>
     </div>
   </div>
 </div>
 
-<!-- Filter Bar -->
+<!-- ─── Filter Bar ───────────────────────────────────────────── -->
 <div class="card mb-4">
   <div class="card-body p-3">
     <form method="GET" class="d-flex flex-wrap gap-2 items-center">
       <div style="flex: 2; min-width: 180px;">
-        <input type="text" name="search" class="form-control" placeholder="{% trans 'Search by student name...' %}" value="{{ search_query }}">
+        <input type="text" name="search" class="form-control" placeholder="{% trans 'Search by student name, GR.NO, or receipt...' %}" value="{{ search_query }}">
+      </div>
+      <div style="flex: 1; min-width: 140px;">
+        <select name="class" class="form-select">
+          <option value="">{% trans "All Classes (બધા ધોરણ)" %}</option>
+          <option value="5" {% if class_filter == '5' %}selected{% endif %}>Grade 5 (ધોરણ ૫)</option>
+          <option value="6" {% if class_filter == '6' %}selected{% endif %}>Grade 6 (ધોરણ ૬)</option>
+          <option value="7" {% if class_filter == '7' %}selected{% endif %}>Grade 7 (ધોરણ ૭)</option>
+          <option value="8" {% if class_filter == '8' %}selected{% endif %}>Grade 8 (ધોરણ ૮)</option>
+        </select>
       </div>
       <div style="flex: 1; min-width: 140px;">
         <select name="status" class="form-select">
@@ -62,7 +177,7 @@
         <button type="submit" class="btn btn-primary btn-sm">
           <i class="fas fa-search me-1"></i>{% trans "Filter" %}
         </button>
-        {% if search_query or status_filter %}
+        {% if search_query or status_filter or class_filter %}
           <a href="{% url 'fee_list' %}" class="btn btn-ghost btn-sm">{% trans "Reset" %}</a>
         {% endif %}
       </div>
@@ -70,16 +185,20 @@
   </div>
 </div>
 
+<!-- ─── Fee Records Table ────────────────────────────────────── -->
 {% if fees %}
-  <div class="card">
+  <div class="card shadow-sm border-0">
     <div class="card-body p-0">
       <div class="table-wrapper">
-        <table>
+        <table class="table mb-0" style="font-size: 0.875rem;">
           <thead>
-            <tr>
-              <th>{% trans "Student" %}</th>
+            <tr style="background: #f1f5f9; color: #1e293b; border-bottom: 2px solid #cbd5e1;">
+              <th style="width: 50px;">SR.NO</th>
+              <th style="color: #2563eb;">GR.NO</th>
+              <th>{% trans "Student Name" %}</th>
+              <th>{% trans "Class" %}</th>
               <th>{% trans "Amount" %}</th>
-              <th>{% trans "Type" %}</th>
+              <th>{% trans "Fee Type" %}</th>
               <th>{% trans "Due Date" %}</th>
               <th>{% trans "Status" %}</th>
               <th>{% trans "Payment Date" %}</th>
@@ -89,14 +208,23 @@
           </thead>
           <tbody>
             {% for fee in fees %}
-            <tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td class="text-muted fw-700 font-mono">{{ forloop.counter0|add:fees.start_index }}</td>
               <td>
-                <div class="fw-600">{{ fee.student.name }}</div>
-                <div class="fs-xs text-muted">{{ fee.student.student_id }}</div>
+                <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-family: monospace;">
+                  {{ fee.student.student_id }}
+                </span>
               </td>
-              <td class="fw-700">₹ {{ fee.amount }}</td>
-              <td><span class="badge badge-primary">{{ fee.get_fee_type_display }}</span></td>
-              <td class="fs-xs text-muted">{{ fee.due_date|date:"d M Y" }}</td>
+              <td>
+                <div class="fw-700 text-dark">{{ fee.student.name }}</div>
+                <div class="fs-xs text-muted font-mono">{{ fee.receipt_number }}</div>
+              </td>
+              <td>
+                <span class="badge badge-primary">{{ fee.student.get_class_field_display }}</span>
+              </td>
+              <td class="fw-800 text-dark">₹ {{ fee.amount }}</td>
+              <td><span class="badge badge-light border">{{ fee.get_fee_type_display }}</span></td>
+              <td class="fs-xs text-muted font-mono">{{ fee.due_date|date:"d/m/Y"|default:"—" }}</td>
               <td>
                 {% if fee.status == 'paid' %}
                   <span class="badge badge-success"><i class="fas fa-check-circle me-1"></i>{% trans "Paid" %}</span>
@@ -104,25 +232,25 @@
                   <span class="badge badge-danger"><i class="fas fa-clock me-1"></i>{% trans "Pending" %}</span>
                 {% endif %}
               </td>
-              <td class="fs-xs text-muted">{{ fee.payment_date|date:"d M Y"|default:"—" }}</td>
+              <td class="fs-xs text-muted font-mono">{{ fee.payment_date|date:"d/m/Y"|default:"—" }}</td>
               <td>
-                <a href="{% url 'fee_pdf_receipt' fee.pk %}" class="btn btn-ghost btn-sm text-danger" target="_blank" title="{% trans 'Download Receipt PDF' %}">
-                  <i class="fas fa-file-pdf"></i>
+                <a href="{% url 'fee_pdf_receipt' fee.pk %}" class="btn btn-ghost btn-xs text-danger" target="_blank" title="{% trans 'Download Receipt PDF' %}">
+                  <i class="fas fa-file-pdf fs-sm"></i>
                 </a>
               </td>
               <td class="text-right">
                 {% if fee.status == 'pending' %}
                 <form method="POST" action="{% url 'fee_mark_paid' fee.pk %}" style="display: inline;">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-success btn-sm" title="{% trans 'Mark as Paid' %}">
+                  <button type="submit" class="btn btn-success btn-xs" title="{% trans 'Mark as Paid' %}">
                     <i class="fas fa-check me-1"></i>{% trans "Paid" %}
                   </button>
                 </form>
                 {% endif %}
-                <a href="{% url 'fee_edit' fee.pk %}" class="btn btn-ghost btn-sm" title="{% trans 'Edit' %}">
+                <a href="{% url 'fee_edit' fee.pk %}" class="btn btn-ghost btn-xs text-secondary" title="{% trans 'Edit' %}">
                   <i class="fas fa-edit"></i>
                 </a>
-                <a href="{% url 'fee_delete' fee.pk %}" class="btn btn-ghost btn-sm text-danger" title="{% trans 'Delete' %}">
+                <a href="{% url 'fee_delete' fee.pk %}" class="btn btn-ghost btn-xs text-danger" title="{% trans 'Delete' %}">
                   <i class="fas fa-trash"></i>
                 </a>
               </td>
@@ -137,28 +265,28 @@
   {% if fees.has_other_pages %}
     <div class="pagination mt-4 justify-center">
       {% if fees.has_previous %}
-        <a class="page-link" href="?page=1&search={{ search_query }}&status={{ status_filter }}">&laquo;</a>
-        <a class="page-link" href="?page={{ fees.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}">&lsaquo;</a>
+        <a class="page-link" href="?page=1&search={{ search_query }}&status={{ status_filter }}&class={{ class_filter }}">&laquo;</a>
+        <a class="page-link" href="?page={{ fees.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}&class={{ class_filter }}">&lsaquo;</a>
       {% endif %}
 
       {% for num in fees.paginator.page_range %}
-        <a class="page-link {% if fees.number == num %}active{% endif %}" href="?page={{ num }}&search={{ search_query }}&status={{ status_filter }}">{{ num }}</a>
+        <a class="page-link {% if fees.number == num %}active{% endif %}" href="?page={{ num }}&search={{ search_query }}&status={{ status_filter }}&class={{ class_filter }}">{{ num }}</a>
       {% endfor %}
 
       {% if fees.has_next %}
-        <a class="page-link" href="?page={{ fees.next_page_number }}&search={{ search_query }}&status={{ status_filter }}">&rsaquo;</a>
-        <a class="page-link" href="?page={{ fees.paginator.num_pages }}&search={{ search_query }}&status={{ status_filter }}">&raquo;</a>
+        <a class="page-link" href="?page={{ fees.next_page_number }}&search={{ search_query }}&status={{ status_filter }}&class={{ class_filter }}">&rsaquo;</a>
+        <a class="page-link" href="?page={{ fees.paginator.num_pages }}&search={{ search_query }}&status={{ status_filter }}&class={{ class_filter }}">&raquo;</a>
       {% endif %}
     </div>
   {% endif %}
 
 {% else %}
-  <div class="card">
+  <div class="card p-5 text-center">
     <div class="empty-state">
-      <div class="empty-icon"><i class="fas fa-money-check-alt"></i></div>
-      <div class="empty-title">{% trans "No fee records found." %}</div>
+      <div class="empty-icon"><i class="fas fa-money-check-alt text-muted"></i></div>
+      <div class="empty-title fs-md fw-700">{% trans "આ ધોરણમાં કોઈ ફી રેકોર્ડ મળ્યો નથી." %}</div>
       <a href="{% url 'fee_create' %}" class="btn btn-primary btn-sm mt-3">
-        <i class="fas fa-plus-circle me-1"></i>{% trans "Add Fee Record" %}
+        <i class="fas fa-plus-circle me-1"></i>{% trans "Record Fee" %}
       </a>
     </div>
   </div>

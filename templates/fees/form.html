@@ -5,32 +5,51 @@
 {% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div style="max-width: 680px; margin: 0 auto;">
-  <div class="card">
-    <div class="card-header justify-between">
-      <div class="card-title">
+<div style="max-width: 720px; margin: 0 auto;">
+  <div class="card shadow-sm border-0">
+    <div class="card-header justify-between bg-white py-3">
+      <div class="card-title fs-lg fw-700">
         <i class="fas fa-receipt text-primary me-2"></i>{{ title }}
       </div>
-      <a href="{% url 'fee_list' %}" class="btn btn-ghost btn-sm">&larr; {% trans "Back" %}</a>
+      <a href="{% url 'fee_list' %}" class="btn btn-outline btn-sm">&larr; {% trans "Back to Fees" %}</a>
     </div>
-    <div class="card-body">
+    <div class="card-body p-4">
       <form method="POST" novalidate>
         {% csrf_token %}
 
-        <div class="form-group">
-          <label class="form-label" for="id_student">{% trans "Student" %} <span class="req">*</span></label>
+        <!-- Class Filter for easy student selection -->
+        <div class="p-3 mb-3 rounded-3 border" style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border-color: #bfdbfe !important;">
+          <label class="form-label fw-700 text-primary mb-1" for="class_filter_select">
+            <i class="fas fa-layer-group me-1 text-primary"></i>{% trans "Filter by Class (પહેલાં ધોરણ પસંદ કરો)" %}
+          </label>
+          <select id="class_filter_select" class="form-select" onchange="filterStudentsByClass(this.value)">
+            <option value="">-- {% trans "All Classes (બધા ધોરણ)" %} --</option>
+            <option value="5">Grade 5 (ધોરણ ૫)</option>
+            <option value="6">Grade 6 (ધોરણ ૬)</option>
+            <option value="7">Grade 7 (ધોરણ ૭)</option>
+            <option value="8">Grade 8 (ધોરણ ૮)</option>
+          </select>
+          <div class="form-hint fs-xs text-muted mt-1">
+            <i class="fas fa-info-circle text-info me-1"></i> ધોરણ પસંદ કરશો એટલે નીચે ફક્ત તે જ ધોરણના વિદ્યાર્થીઓ દેખાશે, જેથી શોધવામાં સરળતા રહે.
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label fw-700" for="id_student">
+            <i class="fas fa-user-graduate me-1 text-primary"></i>{% trans "Student (વિદ્યાર્થી પસંદ કરો)" %} <span class="req">*</span>
+          </label>
           {{ form.student }}
           {% if form.student.errors %}<div class="form-error">{{ form.student.errors }}</div>{% endif %}
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_amount">{% trans "Amount (₹)" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_amount">{% trans "Amount (₹ રકમ)" %} <span class="req">*</span></label>
             {{ form.amount }}
             {% if form.amount.errors %}<div class="form-error">{{ form.amount.errors }}</div>{% endif %}
           </div>
           <div class="form-group">
-            <label class="form-label" for="id_fee_type">{% trans "Fee Type" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_fee_type">{% trans "Fee Type (ફી નો પ્રકાર)" %} <span class="req">*</span></label>
             {{ form.fee_type }}
             {% if form.fee_type.errors %}<div class="form-error">{{ form.fee_type.errors }}</div>{% endif %}
           </div>
@@ -38,12 +57,12 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_status">{% trans "Payment Status" %}</label>
+            <label class="form-label fw-700" for="id_status">{% trans "Payment Status (સ્થિતિ)" %}</label>
             {{ form.status }}
             {% if form.status.errors %}<div class="form-error">{{ form.status.errors }}</div>{% endif %}
           </div>
           <div class="form-group">
-            <label class="form-label" for="id_due_date">{% trans "Due Date" %}</label>
+            <label class="form-label fw-700" for="id_due_date">{% trans "Due Date" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
             {{ form.due_date }}
             {% if form.due_date.errors %}<div class="form-error">{{ form.due_date.errors }}</div>{% endif %}
           </div>
@@ -51,12 +70,12 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_payment_date">{% trans "Payment Date" %}</label>
+            <label class="form-label fw-700" for="id_payment_date">{% trans "Payment Date (ચૂકવણી તારીખ)" %}</label>
             {{ form.payment_date }}
             {% if form.payment_date.errors %}<div class="form-error">{{ form.payment_date.errors }}</div>{% endif %}
           </div>
           <div class="form-group">
-            <label class="form-label" for="id_payment_method">{% trans "Payment Method" %}</label>
+            <label class="form-label fw-700" for="id_payment_method">{% trans "Payment Method (ચૂકવણી પદ્ધતિ)" %}</label>
             {{ form.payment_method }}
             {% if form.payment_method.errors %}<div class="form-error">{{ form.payment_method.errors }}</div>{% endif %}
           </div>
@@ -64,7 +83,7 @@
 
         <div class="d-flex justify-end gap-2 mt-5 pt-3 border-top">
           <a href="{% url 'fee_list' %}" class="btn btn-outline">{% trans "Cancel" %}</a>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary btn-lg px-4">
             <i class="fas fa-save me-1"></i>{% trans "Save Fee Record" %}
           </button>
         </div>
@@ -72,4 +91,39 @@
     </div>
   </div>
 </div>
+
+<script>
+  function filterStudentsByClass(selectedClass) {
+    const studentSelect = document.getElementById('id_student');
+    if (!studentSelect) return;
+    const options = studentSelect.options;
+
+    const classTokens = {
+      '5': ['[Grade 5]', '[ધોરણ ૫]', 'Grade 5', 'ધોરણ ૫'],
+      '6': ['[Grade 6]', '[ધોરણ ૬]', 'Grade 6', 'ધોરણ ૬'],
+      '7': ['[Grade 7]', '[ધોરણ ૭]', 'Grade 7', 'ધોરણ ૭'],
+      '8': ['[Grade 8]', '[ધોરણ ૮]', 'Grade 8', 'ધોરણ ૮'],
+    };
+
+    const tokens = classTokens[selectedClass] || [];
+
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+      if (!opt.value) {
+        opt.style.display = '';
+        continue;
+      }
+      if (!selectedClass) {
+        opt.style.display = '';
+      } else {
+        const matches = tokens.some(t => opt.text.includes(t));
+        opt.style.display = matches ? '' : 'none';
+      }
+    }
+
+    if (studentSelect.selectedIndex > 0 && options[studentSelect.selectedIndex].style.display === 'none') {
+      studentSelect.selectedIndex = 0;
+    }
+  }
+</script>
 {% endblock %}

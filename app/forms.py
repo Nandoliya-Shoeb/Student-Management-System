@@ -133,6 +133,21 @@ class FeeForm(forms.ModelForm):
         label=_('Due Date'),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Order students by class and numeric student_id
+        try:
+            from django.db.models.functions import Cast
+            from django.db.models import IntegerField
+            qs = Student.objects.filter(status='active').annotate(
+                num_id=Cast('student_id', IntegerField())
+            ).order_by('class_field', 'num_id')
+        except Exception:
+            qs = Student.objects.filter(status='active').order_by('class_field', 'student_id')
+
+        self.fields['student'].queryset = qs
+        self.fields['student'].label_from_instance = lambda obj: f"[{obj.get_class_field_display()}] {obj.student_id} - {obj.name}"
+
     class Meta:
         model = Fee
         fields = [

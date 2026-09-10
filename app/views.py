@@ -1081,27 +1081,67 @@ def fee_list(request):
 
     fees = Fee.objects.select_related('student')
 
-    status_filter = request.GET.get('status', '')
+    class_filter = request.GET.get('class', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    search_query = request.GET.get('search', '').strip()
+
+    if class_filter and class_filter != 'all':
+        fees = fees.filter(student__class_field=class_filter)
+
     if status_filter:
         fees = fees.filter(status=status_filter)
 
-    search_query = request.GET.get('search', '')
     if search_query:
-        fees = fees.filter(student__name__icontains=search_query)
+        fees = fees.filter(
+            Q(student__name__icontains=search_query) |
+            Q(student__student_id__icontains=search_query) |
+            Q(receipt_number__icontains=search_query)
+        )
 
-    paginator = Paginator(fees, 25)
+    # Class-wise fee breakdown statistics (ધોરણ મુજબ ફી નું વિશ્લેષણ)
+    class_fee_stats = {}
+    for c in ['5', '6', '7', '8']:
+        c_qs = Fee.objects.filter(student__class_field=c)
+        c_paid = c_qs.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
+        c_pending = c_qs.filter(status='pending').aggregate(t=Sum('amount'))['t'] or 0
+        class_fee_stats[c] = {
+            'paid': c_paid,
+            'pending': c_pending,
+            'total': c_paid + c_pending,
+            'records': c_qs.count(),
+        }
+
+    # Overall or filtered totals
+    if class_filter and class_filter != 'all':
+        filtered_scope = Fee.objects.filter(student__class_field=class_filter)
+    else:
+        filtered_scope = Fee.objects.all()
+
+    total_paid = filtered_scope.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    total_pending = filtered_scope.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+    paginator = Paginator(fees, 50)
     page_number = request.GET.get('page')
     fees_page = paginator.get_page(page_number)
 
-    total_paid = Fee.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
-    total_pending = Fee.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+    class_names = {
+        '5': _('Grade 5 (ધોરણ ૫)'),
+        '6': _('Grade 6 (ધોરણ ૬)'),
+        '7': _('Grade 7 (ધોરણ ૭)'),
+        '8': _('Grade 8 (ધોરણ ૮)'),
+        'all': _('All Classes (બધા ધોરણ)'),
+    }
+    current_class_name = class_names.get(class_filter, '')
 
     context = {
         'fees': fees_page,
+        'class_filter': class_filter,
         'status_filter': status_filter,
         'search_query': search_query,
         'total_paid': total_paid,
         'total_pending': total_pending,
+        'class_fee_stats': class_fee_stats,
+        'current_class_name': current_class_name,
     }
     return render(request, 'fees/list.html', context)
 
