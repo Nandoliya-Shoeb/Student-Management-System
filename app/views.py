@@ -250,14 +250,27 @@ def dashboard(request):
     quiz_results = QuizResult.objects.all()
     avg_score = quiz_results.aggregate(avg=Avg('percentage'))['avg'] or 0
 
+    total_quizzes = Quiz.objects.filter(is_active=True).count()
+    total_tests_taken = quiz_results.count()
+
+    class_counts = {
+        '5': Student.objects.filter(class_field='5', status='active').count(),
+        '6': Student.objects.filter(class_field='6', status='active').count(),
+        '7': Student.objects.filter(class_field='7', status='active').count(),
+        '8': Student.objects.filter(class_field='8', status='active').count(),
+    }
+
     context = {
         'total_students': total_students,
         'active_students': active_students,
         'pending_fees': pending_fees,
         'collected_fees': collected_fees,
-        'today_attendance': today_attendance,
+        'class_counts': class_counts,
+        'total_quizzes': total_quizzes,
+        'total_tests_taken': total_tests_taken,
         'avg_score': round(avg_score, 2),
-        'recent_results': QuizResult.objects.select_related('student', 'quiz').order_by('-taken_date')[:5],
+        'recent_results': QuizResult.objects.select_related('student', 'quiz').order_by('-taken_date')[:6],
+        'recent_students': Student.objects.order_by('-created_at')[:5],
         'is_admin_view': True,
     }
     return render(request, 'dashboard.html', context)
@@ -527,23 +540,44 @@ def student_csv_import(request):
     if request.method == 'POST':
         form = CSVImportForm(request.POST, request.FILES)
         if form.is_valid():
-            csv_file = request.FILES['csv_file']
+            uploaded_file = request.FILES['csv_file']
             default_class = form.cleaned_data.get('default_class', '8')
             try:
-                # Read with flexible encoding support
-                raw_bytes = csv_file.read()
-                try:
-                    raw_content = raw_bytes.decode('utf-8-sig')
-                except UnicodeDecodeError:
-                    try:
-                        raw_content = raw_bytes.decode('utf-8')
-                    except UnicodeDecodeError:
-                        raw_content = raw_bytes.decode('latin-1')
+                rows_data = []
 
-                # Support both comma and tab delimited files
-                sample = raw_content[:2048]
-                delimiter = '\t' if '\t' in sample and sample.count('\t') > sample.count(',') else ','
-                reader = csv.DictReader(io.StringIO(raw_content), delimiter=delimiter)
+                # Handle Excel (.xlsx, .xls) files directly
+                if uploaded_file.name.lower().endswith(('.xlsx', '.xls')):
+                    import openpyxl
+                    wb = openpyxl.load_workbook(uploaded_file, data_only=True)
+                    sheet = wb.active
+                    all_rows = list(sheet.iter_rows(values_only=True))
+                    if all_rows:
+                        headers = [str(h).strip() if h is not None else '' for h in all_rows[0]]
+                        for r in all_rows[1:]:
+                            if not any(cell is not None and str(cell).strip() != '' for cell in r):
+                                continue
+                            row_dict = {}
+                            for col_idx, h in enumerate(headers):
+                                if h and col_idx < len(r):
+                                    row_dict[h] = r[col_idx]
+                            rows_data.append(row_dict)
+                else:
+                    # Handle CSV and TXT files
+                    raw_bytes = uploaded_file.read()
+                    try:
+                        raw_content = raw_bytes.decode('utf-8-sig')
+                    except UnicodeDecodeError:
+                        try:
+                            raw_content = raw_bytes.decode('utf-8')
+                        except UnicodeDecodeError:
+                            raw_content = raw_bytes.decode('latin-1')
+
+                    sample = raw_content[:2048]
+                    delimiter = '\t' if '\t' in sample and sample.count('\t') > sample.count(',') else ','
+                    reader = csv.DictReader(io.StringIO(raw_content), delimiter=delimiter)
+                    for r in reader:
+                        if any(val is not None and str(val).strip() != '' for val in r.values()):
+                            rows_data.append(r)
 
                 created_count = 0
                 updated_count = 0
@@ -552,11 +586,18 @@ def student_csv_import(request):
                 def parse_flex_date(date_val):
                     if not date_val:
                         return timezone.localdate()
+                    from datetime import date as dt_date
+                    if isinstance(date_val, datetime):
+                        return date_val.date()
+                    if isinstance(date_val, dt_date):
+                        return date_val
+
                     val = str(date_val).strip()
                     formats = [
-                        '%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y',
+                        '%m/%d/%Y', '%d/%m/%Y', '%d-%m-%Y', '%m-%d-%Y',
                         '%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d',
-                        '%d/%m/%y', '%d-%m-%y', '%d.%m.%y',
+                        '%d.%m.%Y', '%m.%d.%Y',
+                        '%d/%m/%y', '%m/%d/%y', '%d-%m-%y', '%m-%d-%y',
                         '%d %b %Y', '%d %B %Y',
                     ]
                     for fmt in formats:
@@ -566,35 +607,50 @@ def student_csv_import(request):
                             continue
                     return timezone.localdate()
 
-                for row_idx, raw_row in enumerate(reader, start=2):
+                for row_idx, raw_row in enumerate(rows_data, start=2):
                     try:
                         # Clean and normalize column names (lowercase, no spaces, no dots, no underscores)
                         row = {}
                         for k, v in raw_row.items():
                             if k:
-                                norm_k = k.strip().lower().replace('.', '').replace(' ', '').replace('_', '').replace('-', '')
-                                row[norm_k] = str(v).strip() if v is not None else ''
+                                norm_k = str(k).strip().lower().replace('.', '').replace(' ', '').replace('_', '').replace('-', '')
+                                row[norm_k] = v if v is not None else ''
 
                         # Extract fields flexibly
                         sr_no = row.get('srno') or row.get('sr') or row.get('serialno') or row.get('sno') or ''
                         gr_no = row.get('grno') or row.get('gr') or row.get('grnumber') or row.get('studentid') or row.get('id') or row.get('rollno') or ''
                         name = row.get('studentname') or row.get('name') or row.get('student') or row.get('fullname') or ''
-                        dob_str = row.get('dob') or row.get('birthdate') or row.get('dateofbirth') or row.get('joiningdate') or ''
+                        dob_val = row.get('dob') or row.get('birthdate') or row.get('dateofbirth') or row.get('joiningdate') or ''
                         address = row.get('address') or row.get('add') or row.get('city') or ''
                         mobile = row.get('mobailno') or row.get('mobileno') or row.get('mobail') or row.get('mobile') or row.get('phone') or row.get('phoneno') or row.get('contact') or row.get('parentmobile') or ''
                         parent_name = row.get('parentname') or row.get('fathername') or row.get('guardianname') or ''
                         email = row.get('email') or row.get('emailid') or ''
                         class_val = row.get('class') or row.get('classfield') or row.get('grade') or row.get('standard') or row.get('std') or row.get('dhoran') or default_class
 
+                        # Convert to strings
+                        name = str(name).strip()
+                        gr_no = str(gr_no).strip()
+                        sr_no = str(sr_no).strip()
+                        address = str(address).strip()
+                        parent_name = str(parent_name).strip()
+                        email = str(email).strip()
+
+                        # Format mobile number cleanly (remove decimal like 8154068812.0)
+                        if mobile != '':
+                            if isinstance(mobile, float) and mobile.is_integer():
+                                mobile = str(int(mobile))
+                            else:
+                                mobile = str(mobile).split('.')[0].strip()
+                        else:
+                            mobile = ''
+
                         # Ensure valid class choice (5, 6, 7, 8)
                         class_val = str(class_val).strip()
                         if class_val not in ['5', '6', '7', '8']:
-                            # Extract first digit if present like "STD 8" -> "8"
                             digits = [c for c in class_val if c in '5678']
                             class_val = digits[0] if digits else default_class
 
                         if not name:
-                            # Skip entirely empty rows
                             if not gr_no and not sr_no and not mobile:
                                 continue
                             errors.append(f"Row {row_idx}: {_('Student name is required')}")
@@ -602,16 +658,20 @@ def student_csv_import(request):
 
                         # Format Student ID / GR Number
                         if gr_no:
+                            # Handle float in Excel like 626.0 -> 626
+                            if gr_no.endswith('.0'):
+                                gr_no = gr_no[:-2]
                             stu_id = gr_no.upper()
-                            # If only numeric, prefix with STD (e.g. 8003 -> STD8003)
                             if stu_id.isdigit():
                                 stu_id = f"STD{stu_id}"
                         elif sr_no:
+                            if sr_no.endswith('.0'):
+                                sr_no = sr_no[:-2]
                             stu_id = f"STD{class_val}{str(sr_no).zfill(3)}"
                         else:
                             stu_id = f"STD{class_val}{str(row_idx).zfill(3)}"
 
-                        joining_date = parse_flex_date(dob_str)
+                        joining_date = parse_flex_date(dob_val)
 
                         # Create or Update Student
                         student, is_created = Student.objects.update_or_create(
@@ -629,7 +689,7 @@ def student_csv_import(request):
                             }
                         )
 
-                        # Auto-create User account for Student Portal Login if not present
+                        # Auto-create User account for Student Portal Login
                         if not student.user:
                             user_uname = student.student_id
                             existing_user = User.objects.filter(username=user_uname).first()
@@ -667,11 +727,12 @@ def student_csv_import(request):
                 return redirect('student_list')
 
             except Exception as e:
-                messages.error(request, f'{_("Error reading CSV file:")} {str(e)}')
+                messages.error(request, f'{_("Error reading file:")} {str(e)}')
     else:
         form = CSVImportForm()
 
     return render(request, 'students/csv_import.html', {'form': form})
+
 
 
 
