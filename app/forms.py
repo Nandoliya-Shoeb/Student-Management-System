@@ -126,6 +126,12 @@ class BulkAttendanceForm(forms.Form):
 
 
 class FeeForm(forms.ModelForm):
+    due_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label=_('Due Date'),
+    )
+
     class Meta:
         model = Fee
         fields = [
@@ -137,7 +143,6 @@ class FeeForm(forms.ModelForm):
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'fee_type': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
-            'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'payment_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'payment_method': forms.Select(attrs={'class': 'form-select'}),
         }

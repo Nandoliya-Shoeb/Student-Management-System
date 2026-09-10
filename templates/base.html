@@ -41,9 +41,6 @@
     <a href="{% url 'student_list' %}" class="sidebar-link {% if 'student' in request.resolver_match.url_name %}active{% endif %}">
       <i class="fas fa-users"></i>{% trans "Students" %}
     </a>
-    <a href="{% url 'attendance_list' %}" class="sidebar-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
-      <i class="fas fa-calendar-check"></i>{% trans "Attendance" %}
-    </a>
     <a href="{% url 'fee_list' %}" class="sidebar-link {% if 'fee' in request.resolver_match.url_name %}active{% endif %}">
       <i class="fas fa-money-bill-wave"></i>{% trans "Fees" %}
     </a>

@@ -82,7 +82,7 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_parent_name">{% trans "Parent / Guardian Name" %} <span class="req">*</span></label>
+            <label class="form-label" for="id_parent_name">{% trans "Parent / Guardian Name" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
             {{ form.parent_name }}
             {% if form.parent_name.errors %}<div class="form-error">{{ form.parent_name.errors }}</div>{% endif %}
           </div>

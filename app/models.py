@@ -116,7 +116,7 @@ class Fee(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], verbose_name=_('Amount'))
     fee_type = models.CharField(max_length=20, choices=FEE_TYPE_CHOICES, verbose_name=_('Fee Type'))
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name=_('Status'))
-    due_date = models.DateField(verbose_name=_('Due Date'))
+    due_date = models.DateField(null=True, blank=True, verbose_name=_('Due Date'))
     payment_date = models.DateField(null=True, blank=True, verbose_name=_('Payment Date'))
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True, verbose_name=_('Payment Method'))
     receipt_number = models.CharField(max_length=50, unique=True, verbose_name=_('Receipt Number'))
@@ -124,7 +124,7 @@ class Fee(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['-due_date']
+        ordering = ['-created_at']
         verbose_name = _('Fee')
         verbose_name_plural = _('Fees')
         indexes = [

@@ -15,9 +15,6 @@
     <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm">
       <i class="fas fa-user-plus"></i>{% trans "Add Student" %}
     </a>
-    <a href="{% url 'attendance_list' %}" class="btn btn-outline btn-sm">
-      <i class="fas fa-calendar-check"></i>{% trans "Mark Attendance" %}
-    </a>
     <a href="{% url 'quiz_create' %}" class="btn btn-outline btn-sm">
       <i class="fas fa-plus-circle"></i>{% trans "Create Quiz" %}
     </a>
@@ -72,33 +69,7 @@
 
 <div class="d-grid gap-5" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
 
-  <!-- Today's Attendance Overview -->
-  <div class="card">
-    <div class="card-header justify-between">
-      <div class="card-title">
-        <i class="fas fa-calendar-day text-primary me-2"></i>{% trans "Today's Attendance" %}
-      </div>
-      <a href="{% url 'attendance_list' %}" class="btn btn-ghost btn-sm">{% trans "Manage" %} &rarr;</a>
-    </div>
-    <div class="card-body">
-      <div class="d-grid gap-3" style="grid-template-columns: repeat(3, 1fr);">
-        <div class="text-center p-3 rounded" style="background: var(--clr-success-light);">
-          <div class="fs-2xl fw-700 text-success">{{ today_attendance.present }}</div>
-          <div class="fs-xs fw-600 text-muted">{% trans "Present" %}</div>
-        </div>
-        <div class="text-center p-3 rounded" style="background: var(--clr-danger-light);">
-          <div class="fs-2xl fw-700 text-danger">{{ today_attendance.absent }}</div>
-          <div class="fs-xs fw-600 text-muted">{% trans "Absent" %}</div>
-        </div>
-        <div class="text-center p-3 rounded" style="background: var(--clr-warning-light);">
-          <div class="fs-2xl fw-700 text-warning">{{ today_attendance.leave }}</div>
-          <div class="fs-xs fw-600 text-muted">{% trans "Leave" %}</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Financial Summary -->
   <div class="card">
     <div class="card-header justify-between">
       <div class="card-title">
