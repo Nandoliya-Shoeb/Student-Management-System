@@ -62,6 +62,7 @@
         <table>
           <thead>
             <tr>
+              <th style="width: 50px;">{% trans "SR.NO" %}</th>
               <th>{% trans "GR.NO" %}</th>
               <th>{% trans "Student Name" %}</th>
               <th>{% trans "Class" %}</th>
@@ -74,6 +75,7 @@
           <tbody>
             {% for student in students %}
             <tr>
+              <td class="text-muted fs-xs fw-600">{{ forloop.counter }}</td>
               <td class="fw-700 text-primary">{{ student.student_id }}</td>
               <td>
                 <div class="fw-600">{{ student.name }}</div>
