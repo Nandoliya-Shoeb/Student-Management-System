@@ -6,27 +6,29 @@
 
 {% block content %}
 <div style="max-width: 800px; margin: 0 auto;">
-  <div class="card">
-    <div class="card-header justify-between">
-      <div class="card-title">
+  <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-between items-center">
+      <div class="card-title fs-base fw-800 text-dark">
         <i class="fas fa-user-graduate text-primary me-2"></i>{{ title }}
       </div>
-      <a href="{% url 'student_list' %}" class="btn btn-ghost btn-sm">&larr; {% trans "Back" %}</a>
+      <a href="{% url 'student_list' %}" class="btn btn-outline btn-sm">&larr; {% trans "Back to Register" %}</a>
     </div>
-    <div class="card-body">
+    <div class="card-body p-4">
       <form method="POST" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
 
-        <h3 class="fs-sm fw-700 text-muted uppercase mb-3"><i class="fas fa-id-card me-1"></i>{% trans "Identity & Academic" %}</h3>
+        <h3 class="fs-xs fw-800 text-muted uppercase mb-3 d-flex align-items-center gap-1">
+          <i class="fas fa-id-card text-primary"></i> {% trans "Identity & Academic (વિદ્યાર્થીની માહિતી)" %}
+        </h3>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_student_id">{% trans "GR.NO (જનરલ રજીસ્ટર નંબર)" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_student_id">{% trans "GR.NO (જનરલ રજીસ્ટર નંબર)" %} <span class="req">*</span></label>
             {{ form.student_id }}
-            <div class="form-hint">{% trans "GR Number (દા.ત. 626)" %}</div>
+            <div class="form-hint fs-xs text-muted">{% trans "દા.ત. 626 (ફક્ત નંબર)" %}</div>
             {% if form.student_id.errors %}<div class="form-error">{{ form.student_id.errors }}</div>{% endif %}
           </div>
           <div class="form-group">
-            <label class="form-label" for="id_name">{% trans "Student Full Name" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_name">{% trans "Student Full Name (વિદ્યાર્થીનું પૂરું નામ)" %} <span class="req">*</span></label>
             {{ form.name }}
             {% if form.name.errors %}<div class="form-error">{{ form.name.errors }}</div>{% endif %}
           </div>
@@ -34,31 +36,35 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_class_field">{% trans "Class / Grade" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_class_field">{% trans "Class / Grade (ધોરણ)" %} <span class="req">*</span></label>
             {{ form.class_field }}
             {% if form.class_field.errors %}<div class="form-error">{{ form.class_field.errors }}</div>{% endif %}
           </div>
           <div class="form-group">
-            <label class="form-label" for="id_joining_date">{% trans "Joining Date" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_joining_date">{% trans "Date of Birth (DOB - જન્મ તારીખ)" %} <span class="req">*</span></label>
             {{ form.joining_date }}
+            <div class="form-hint fs-xs text-muted">{% trans "ફોર્મેટ: YYYY-MM-DD અથવા DD/MM/YYYY" %}</div>
             {% if form.joining_date.errors %}<div class="form-error">{{ form.joining_date.errors }}</div>{% endif %}
           </div>
         </div>
 
         {% if user_form %}
-        <div class="p-3 my-4 rounded border" style="background: var(--clr-primary-bg); border-color: hsla(217,89%,42%,.2) !important;">
-          <h3 class="fs-sm fw-700 text-primary mb-2">
-            <i class="fas fa-lock me-1"></i>{% trans "Student Portal Login Credentials" %}
+        <div class="p-3 my-4 rounded-3 border" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe !important;">
+          <h3 class="fs-xs fw-800 text-primary mb-1 d-flex align-items-center gap-1">
+            <i class="fas fa-key"></i> {% trans "Student Login Password (વિદ્યાર્થી પાસવર્ડ)" %}
           </h3>
-          <p class="fs-xs text-muted mb-3">{% trans "Set the password for the student to login with their Student ID." %}</p>
+          <p class="fs-xs text-muted mb-3">
+            <i class="fas fa-info-circle text-primary me-1"></i>
+            {% trans "જો પાસવર્ડ ખાલી રાખશો, તો આપોઆપ GR.NO જ પાસવર્ડ તરીકે સેટ થઈ જશે (વિદ્યાર્થીને યાદ રાખવામાં સરળતા રહેશે)." %}
+          </p>
           <div class="form-row">
             <div class="form-group mb-0">
-              <label class="form-label" for="id_password">{{ user_form.password.label }} <span class="req">*</span></label>
+              <label class="form-label fw-700" for="id_password">{{ user_form.password.label }}</label>
               {{ user_form.password }}
               {% if user_form.password.errors %}<div class="form-error">{{ user_form.password.errors }}</div>{% endif %}
             </div>
             <div class="form-group mb-0">
-              <label class="form-label" for="id_password_confirm">{{ user_form.password_confirm.label }} <span class="req">*</span></label>
+              <label class="form-label fw-700" for="id_password_confirm">{{ user_form.password_confirm.label }}</label>
               {{ user_form.password_confirm }}
               {% if user_form.password_confirm.errors %}<div class="form-error">{{ user_form.password_confirm.errors }}</div>{% endif %}
             </div>
@@ -66,47 +72,49 @@
         </div>
         {% endif %}
 
-        <h3 class="fs-sm fw-700 text-muted uppercase mt-4 mb-3"><i class="fas fa-phone me-1"></i>{% trans "Contact & Family" %}</h3>
+        <h3 class="fs-xs fw-800 text-muted uppercase mt-4 mb-3 d-flex align-items-center gap-1">
+          <i class="fas fa-phone text-success"></i> {% trans "Contact & Family (સંપર્ક અને વાલીની વિગતો)" %}
+        </h3>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_email">{% trans "Email Address" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
-            {{ form.email }}
-            {% if form.email.errors %}<div class="form-error">{{ form.email.errors }}</div>{% endif %}
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="id_phone">{% trans "Phone Number" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_phone">{% trans "Mobile No. (મોબાઇલ નંબર)" %} <span class="req">*</span></label>
             {{ form.phone }}
             {% if form.phone.errors %}<div class="form-error">{{ form.phone.errors }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label fw-700" for="id_email">{% trans "Email Address" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
+            {{ form.email }}
+            {% if form.email.errors %}<div class="form-error">{{ form.email.errors }}</div>{% endif %}
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_parent_name">{% trans "Parent / Guardian Name" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
+            <label class="form-label fw-700" for="id_parent_name">{% trans "Parent / Guardian Name" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
             {{ form.parent_name }}
             {% if form.parent_name.errors %}<div class="form-error">{{ form.parent_name.errors }}</div>{% endif %}
           </div>
           <div class="form-group">
-            <label class="form-label" for="id_parent_mobile">{% trans "Parent Mobile" %} <span class="req">*</span></label>
+            <label class="form-label fw-700" for="id_parent_mobile">{% trans "Parent Mobile (SMS માટે નંબર)" %} <span class="req">*</span></label>
             {{ form.parent_mobile }}
             {% if form.parent_mobile.errors %}<div class="form-error">{{ form.parent_mobile.errors }}</div>{% endif %}
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="id_address">{% trans "Residential Address" %}</label>
+          <label class="form-label fw-700" for="id_address">{% trans "Residential Address (સરનામું)" %}</label>
           {{ form.address }}
           {% if form.address.errors %}<div class="form-error">{{ form.address.errors }}</div>{% endif %}
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="id_photo">{% trans "Student Photo" %}</label>
+            <label class="form-label fw-700" for="id_photo">{% trans "Student Photo" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
             {{ form.photo }}
             {% if form.photo.errors %}<div class="form-error">{{ form.photo.errors }}</div>{% endif %}
           </div>
           <div class="form-group">
-            <label class="form-label" for="id_status">{% trans "Enrollment Status" %}</label>
+            <label class="form-label fw-700" for="id_status">{% trans "Enrollment Status" %}</label>
             {{ form.status }}
             {% if form.status.errors %}<div class="form-error">{{ form.status.errors }}</div>{% endif %}
           </div>
@@ -114,7 +122,7 @@
 
         <div class="d-flex justify-end gap-2 mt-5 pt-4 border-top">
           <a href="{% url 'student_list' %}" class="btn btn-outline">{% trans "Cancel" %}</a>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary px-4 fw-700">
             <i class="fas fa-save me-1"></i>{% trans "Save Student" %}
           </button>
         </div>
