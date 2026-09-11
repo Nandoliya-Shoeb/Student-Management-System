@@ -56,15 +56,16 @@ def send_parent_sms(student, quiz, quiz_result):
         logger.info('SMS skipped: FAST2SMS_API_KEY not configured.')
         return
 
-    mobile = (student.parent_mobile or '').strip() or (student.phone or '').strip()
-    if not mobile:
-        logger.info(f'SMS skipped: No mobile number for student {student.student_id}.')
+    raw_mobile = (student.parent_mobile or '').strip() or (student.phone or '').strip()
+    mobile_digits = ''.join(filter(str.isdigit, raw_mobile))[-10:]
+    if len(mobile_digits) != 10:
+        logger.info(f'SMS skipped: Invalid mobile number ({raw_mobile}) for student {student.student_id}.')
         return
 
     # Build human-readable message
     total_possible = quiz.get_total_marks()
     percentage = float(quiz_result.percentage)
-    status_word = 'PASS ✅' if quiz_result.passed else 'FAIL ❌'
+    status_word = 'PASS' if quiz_result.passed else 'FAIL'
 
     dob_str = ''
     if student.joining_date:
@@ -74,16 +75,15 @@ def send_parent_sms(student, quiz, quiz_result):
             dob_str = str(student.joining_date)
 
     message = (
-        f"Dear Parent, {status_word}\n"
+        f"Dear Parent, Result: {status_word}\n"
         f"Student: {student.name}\n"
         f"GR.NO: {student.student_id} | Class: {student.get_class_field_display()}\n"
         f"DOB: {dob_str}\n"
         f"Quiz: {quiz.title}\n"
-        f"Marks: {quiz_result.correct_answers}/{quiz.total_questions} "
-        f"({percentage:.1f}%)\n"
+        f"Marks: {quiz_result.correct_answers}/{quiz.total_questions} ({percentage:.1f}%)\n"
     )
     if not quiz_result.passed:
-        message += "Percentage below passing mark. Please contact school.\n"
+        message += "Percentage below 20%. Student FAILED.\n"
     message += "- School Management"
 
     try:
@@ -91,19 +91,17 @@ def send_parent_sms(student, quiz, quiz_result):
             'https://www.fast2sms.com/dev/bulkV2',
             headers={'authorization': api_key},
             data={
-                'route': 'q',          # quick/transactional route
+                'route': 'q',          # quick route (no DLT required)
                 'message': message,
-                'language': 'english',
-                'flash': 0,
-                'numbers': mobile,
+                'numbers': mobile_digits,
             },
             timeout=5,
         )
         resp_data = response.json()
         if resp_data.get('return'):
-            logger.info(f'SMS sent to {mobile} for student {student.student_id}.')
+            logger.info(f'SMS sent to {mobile_digits} for student {student.student_id}.')
         else:
-            logger.warning(f'SMS failed for {student.student_id}: {resp_data}')
+            logger.warning(f'Fast2SMS response for {student.student_id}: {resp_data}')
     except Exception as exc:
         logger.warning(f'SMS exception for {student.student_id}: {exc}')
 
