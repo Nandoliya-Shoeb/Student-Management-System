@@ -161,3 +161,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_HTTPONLY = True     # Prevents client-side scripts from accessing session cookie
 SESSION_COOKIE_SAMESITE = 'Lax'    # Cross-site request security
 
+# ── SMS Notifications (Fast2SMS) ────────────────────────────────────
+# Sign up free at https://fast2sms.com and add your API key to .env
+# FAST2SMS_API_KEY=your_api_key_here
+FAST2SMS_API_KEY = config('FAST2SMS_API_KEY', default='')

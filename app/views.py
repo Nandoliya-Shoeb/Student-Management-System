@@ -29,8 +29,83 @@ from .utils import (
 )
 
 
+import requests
+import logging
+
 from django.utils import translation
 from django.conf import settings
+
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# SMS Helper — Parent Notification via Fast2SMS
+# ---------------------------------------------------------------------------
+
+def send_parent_sms(student, quiz, quiz_result):
+    """
+    Send a quiz-result SMS to the student's parent mobile using Fast2SMS.
+    Silently skips if:
+      - FAST2SMS_API_KEY is not configured in settings
+      - No parent_mobile or phone is available
+      - API call fails (never crashes the quiz flow)
+    """
+    api_key = getattr(settings, 'FAST2SMS_API_KEY', '').strip()
+    if not api_key:
+        logger.info('SMS skipped: FAST2SMS_API_KEY not configured.')
+        return
+
+    mobile = (student.parent_mobile or '').strip() or (student.phone or '').strip()
+    if not mobile:
+        logger.info(f'SMS skipped: No mobile number for student {student.student_id}.')
+        return
+
+    # Build human-readable message
+    total_possible = quiz.get_total_marks()
+    percentage = float(quiz_result.percentage)
+    status_word = 'PASS ✅' if quiz_result.passed else 'FAIL ❌'
+
+    dob_str = ''
+    if student.joining_date:
+        try:
+            dob_str = student.joining_date.strftime('%d/%m/%Y')
+        except Exception:
+            dob_str = str(student.joining_date)
+
+    message = (
+        f"Dear Parent, {status_word}\n"
+        f"Student: {student.name}\n"
+        f"GR.NO: {student.student_id} | Class: {student.get_class_field_display()}\n"
+        f"DOB: {dob_str}\n"
+        f"Quiz: {quiz.title}\n"
+        f"Marks: {quiz_result.correct_answers}/{quiz.total_questions} "
+        f"({percentage:.1f}%)\n"
+    )
+    if not quiz_result.passed:
+        message += "Percentage below passing mark. Please contact school.\n"
+    message += "- School Management"
+
+    try:
+        response = requests.post(
+            'https://www.fast2sms.com/dev/bulkV2',
+            headers={'authorization': api_key},
+            data={
+                'route': 'q',          # quick/transactional route
+                'message': message,
+                'language': 'english',
+                'flash': 0,
+                'numbers': mobile,
+            },
+            timeout=5,
+        )
+        resp_data = response.json()
+        if resp_data.get('return'):
+            logger.info(f'SMS sent to {mobile} for student {student.student_id}.')
+        else:
+            logger.warning(f'SMS failed for {student.student_id}: {resp_data}')
+    except Exception as exc:
+        logger.warning(f'SMS exception for {student.student_id}: {exc}')
 
 
 from django.views.decorators.csrf import csrf_exempt
@@ -1223,9 +1298,31 @@ def fee_list(request):
 
     fees = Fee.objects.select_related('student')
 
-    class_filter = request.GET.get('class', '').strip()
+    class_filter  = request.GET.get('class', '').strip()
     status_filter = request.GET.get('status', '').strip()
-    search_query = request.GET.get('search', '').strip()
+    search_query  = request.GET.get('search', '').strip()
+
+    # ── Month / Year filter ──────────────────────────────────────
+    now_local   = timezone.localtime(timezone.now())
+    current_month = now_local.month
+    current_year  = now_local.year
+
+    try:
+        month_filter = int(request.GET.get('month', current_month))
+    except (ValueError, TypeError):
+        month_filter = current_month
+    try:
+        year_filter = int(request.GET.get('year', current_year))
+    except (ValueError, TypeError):
+        year_filter = current_year
+
+    # Always apply month+year unless user passes month=0 (meaning "all time")
+    use_month_filter = month_filter != 0
+    if use_month_filter:
+        fees = fees.filter(
+            created_at__month=month_filter,
+            created_at__year=year_filter,
+        )
 
     if class_filter and class_filter != 'all':
         fees = fees.filter(student__class_field=class_filter)
@@ -1240,11 +1337,11 @@ def fee_list(request):
             Q(receipt_number__icontains=search_query)
         )
 
-    # Class-wise fee breakdown statistics (ધોરણ મુજબ ફી નું વિશ્લેષણ)
+    # ── Class-wise breakdown (all-time, for the sidebar cards) ───
     class_fee_stats = {}
     for c in ['5', '6', '7', '8']:
         c_qs = Fee.objects.filter(student__class_field=c)
-        c_paid = c_qs.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
+        c_paid    = c_qs.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
         c_pending = c_qs.filter(status='pending').aggregate(t=Sum('amount'))['t'] or 0
         class_fee_stats[c] = {
             'paid': c_paid,
@@ -1253,18 +1350,54 @@ def fee_list(request):
             'records': c_qs.count(),
         }
 
-    # Overall or filtered totals
+    # ── Month-wise summary for last 12 months ────────────────────
+    monthly_stats = []
+    MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    MONTH_NAMES_GU = ['', 'જાન્યુ', 'ફેબ્રુ', 'માર્ચ', 'એપ્રિ', 'મે', 'જૂન',
+                      'જુલા', 'ઓગ', 'સપ્ટે', 'ઑક્ટો', 'નવે', 'ડિસે']
+    for i in range(11, -1, -1):
+        # Go back i months from current
+        ref = now_local.replace(day=1) - timedelta(days=1) * 0  # start from now_local
+        import calendar
+        m = current_month - i
+        y = current_year
+        while m <= 0:
+            m += 12
+            y -= 1
+        m_qs  = Fee.objects.filter(created_at__month=m, created_at__year=y)
+        m_paid = m_qs.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
+        m_pend = m_qs.filter(status='pending').aggregate(t=Sum('amount'))['t'] or 0
+        monthly_stats.append({
+            'month': m,
+            'year': y,
+            'month_name': MONTH_NAMES[m],
+            'month_name_gu': MONTH_NAMES_GU[m],
+            'paid': m_paid,
+            'pending': m_pend,
+            'total': m_paid + m_pend,
+            'records': m_qs.count(),
+            'is_current': (m == current_month and y == current_year),
+            'is_selected': (m == month_filter and y == year_filter),
+        })
+
+    # ── Overall totals for current filter scope ──────────────────
     if class_filter and class_filter != 'all':
-        filtered_scope = Fee.objects.filter(student__class_field=class_filter)
+        scope_qs = Fee.objects.filter(student__class_field=class_filter)
     else:
-        filtered_scope = Fee.objects.all()
+        scope_qs = Fee.objects.all()
+    if use_month_filter:
+        scope_qs = scope_qs.filter(
+            created_at__month=month_filter,
+            created_at__year=year_filter,
+        )
 
-    total_paid = filtered_scope.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
-    total_pending = filtered_scope.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+    total_paid    = scope_qs.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    total_pending = scope_qs.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
 
-    paginator = Paginator(fees, 50)
+    paginator  = Paginator(fees, 50)
     page_number = request.GET.get('page')
-    fees_page = paginator.get_page(page_number)
+    fees_page  = paginator.get_page(page_number)
 
     class_names = {
         '5': _('Grade 5 (ધોરણ ૫)'),
@@ -1284,12 +1417,159 @@ def fee_list(request):
         'total_pending': total_pending,
         'class_fee_stats': class_fee_stats,
         'current_class_name': current_class_name,
+        # Month filter context
+        'month_filter': month_filter,
+        'year_filter': year_filter,
+        'current_month': current_month,
+        'current_year': current_year,
+        'monthly_stats': monthly_stats,
+        'month_names': ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'],
+        'use_month_filter': use_month_filter,
     }
     return render(request, 'fees/list.html', context)
 
 
 @login_required(login_url='login')
+def fee_monthly_report(request):
+    """Generate and download a styled Excel report for a selected month/year (optionally filtered by class)."""
+    if is_student_user(request.user):
+        return redirect('student_dashboard')
+
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    now_local = timezone.localtime(timezone.now())
+    try:
+        month_filter = int(request.GET.get('month', now_local.month))
+    except (ValueError, TypeError):
+        month_filter = now_local.month
+    try:
+        year_filter = int(request.GET.get('year', now_local.year))
+    except (ValueError, TypeError):
+        year_filter = now_local.year
+
+    class_filter = request.GET.get('class', '').strip()
+
+    MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_name = MONTH_NAMES[month_filter] if 1 <= month_filter <= 12 else str(month_filter)
+
+    qs = Fee.objects.select_related('student').filter(
+        created_at__month=month_filter,
+        created_at__year=year_filter,
+    )
+    if class_filter and class_filter != 'all':
+        qs = qs.filter(student__class_field=class_filter)
+    qs = qs.order_by('student__class_field', 'student__student_id', '-created_at')
+
+    class_label_map = {'5': 'Grade5', '6': 'Grade6', '7': 'Grade7', '8': 'Grade8', 'all': 'All'}
+    class_label = class_label_map.get(class_filter, 'All')
+    filename = f'Fee_Report_{month_name}_{year_filter}_{class_label}.xlsx'
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f'{month_name[:3]} {year_filter}'
+
+    # Styles
+    hdr_fill   = PatternFill(start_color='1E3A5F', end_color='1E3A5F', fill_type='solid')
+    hdr_font   = Font(bold=True, color='FFFFFF', size=11)
+    center_al  = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left_al    = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    thin       = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'),
+    )
+    alt_fill   = PatternFill(start_color='EFF6FF', end_color='EFF6FF', fill_type='solid')
+    paid_fill  = PatternFill(start_color='D1FAE5', end_color='D1FAE5', fill_type='solid')
+    pend_fill  = PatternFill(start_color='FEE2E2', end_color='FEE2E2', fill_type='solid')
+
+    # Title row
+    ws.merge_cells('A1:H1')
+    t = ws['A1']
+    title_class = f' — {class_label}' if class_filter and class_filter != 'all' else ''
+    t.value = f'Fee Collection Report — {month_name} {year_filter}{title_class}'
+    t.font = Font(bold=True, size=14, color='1E3A5F')
+    t.alignment = center_al
+    ws.row_dimensions[1].height = 30
+
+    # Column headers
+    headers = ['SR.NO', 'GR.NO', 'STUDENT NAME', 'CLASS', 'FEE TYPE', 'AMOUNT (₹)', 'STATUS', 'PAYMENT DATE']
+    ws.append(headers)
+    for cell in ws[2]:
+        cell.font = hdr_font
+        cell.fill = hdr_fill
+        cell.alignment = center_al
+        cell.border = thin
+    ws.row_dimensions[2].height = 22
+
+    fees_list = list(qs)
+    grand_paid = Decimal('0')
+    grand_pending = Decimal('0')
+
+    for i, fee in enumerate(fees_list, start=1):
+        pay_date = fee.payment_date.strftime('%d/%m/%Y') if fee.payment_date else '—'
+        row = [
+            i,
+            fee.student.student_id,
+            fee.student.name,
+            fee.student.get_class_field_display(),
+            fee.get_fee_type_display(),
+            float(fee.amount),
+            'PAID' if fee.status == 'paid' else 'PENDING',
+            pay_date,
+        ]
+        ws.append(row)
+        row_num = i + 2
+        is_paid = fee.status == 'paid'
+        if is_paid:
+            grand_paid += fee.amount
+        else:
+            grand_pending += fee.amount
+        for col_idx, cell in enumerate(ws[row_num], start=1):
+            cell.border = thin
+            cell.alignment = left_al if col_idx > 2 else center_al
+            if is_paid:
+                if col_idx == 7:
+                    cell.fill = paid_fill
+                    cell.font = Font(bold=True, color='065F46')
+            else:
+                if col_idx == 7:
+                    cell.fill = pend_fill
+                    cell.font = Font(bold=True, color='991B1B')
+            if col_idx != 7 and i % 2 == 0:
+                cell.fill = alt_fill
+
+    # Summary row
+    summary_row = len(fees_list) + 3
+    ws.cell(summary_row, 1, 'TOTAL').font = Font(bold=True)
+    ws.cell(summary_row, 1).alignment = center_al
+    ws.merge_cells(f'A{summary_row}:E{summary_row}')
+    ws.cell(summary_row, 1, f'TOTAL — {len(fees_list)} records | Paid: ₹{grand_paid} | Pending: ₹{grand_pending}')
+    ws.cell(summary_row, 1).font = Font(bold=True, color='1E3A5F')
+    ws.cell(summary_row, 1).fill = PatternFill(start_color='DBEAFE', end_color='DBEAFE', fill_type='solid')
+
+    # Column widths
+    for idx, w in enumerate([8, 10, 28, 12, 14, 14, 12, 16], start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = w
+    ws.freeze_panes = 'A3'
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required(login_url='login')
 def fee_create(request):
+
     if is_student_user(request.user):
         return redirect('student_dashboard')
 
@@ -1651,6 +1931,13 @@ def quiz_take(request, pk):
             quiz_result.save()
 
         _update_student_progress(student)
+
+        # ── Send SMS to parent immediately on quiz submit ──
+        try:
+            send_parent_sms(student, quiz, quiz_result)
+        except Exception as _sms_exc:
+            logger.warning(f'Unexpected SMS error: {_sms_exc}')
+
         messages.success(request, _('Quiz submitted successfully!'))
         return redirect('quiz_result', pk=quiz_result.pk)
 

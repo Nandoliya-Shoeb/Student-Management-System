@@ -32,10 +32,12 @@ urlpatterns = [
     # Fees
     path('fees/', views.fee_list, name='fee_list'),
     path('fees/create/', views.fee_create, name='fee_create'),
+    path('fees/monthly-report/', views.fee_monthly_report, name='fee_monthly_report'),
     path('fees/<int:pk>/edit/', views.fee_edit, name='fee_edit'),
     path('fees/<int:pk>/delete/', views.fee_delete, name='fee_delete'),
     path('fees/<int:pk>/mark-paid/', views.fee_mark_paid, name='fee_mark_paid'),
     path('fees/<int:pk>/receipt/', views.fee_pdf_receipt, name='fee_pdf_receipt'),
+
 
     # Quiz management
     path('quiz/', views.quiz_list, name='quiz_list'),
