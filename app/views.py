@@ -62,10 +62,11 @@ def send_parent_sms(student, quiz, quiz_result):
         logger.info(f'SMS skipped: Invalid mobile number ({raw_mobile}) for student {student.student_id}.')
         return
 
-    # Build human-readable message
+    # Build human-readable message in Gujarati
     total_possible = quiz.get_total_marks()
     percentage = float(quiz_result.percentage)
-    status_word = 'PASS' if quiz_result.passed else 'FAIL'
+    is_fail = (percentage < 20) or (not quiz_result.passed)
+    status_word = 'નાપાસ (FAIL)' if is_fail else 'પાસ (PASS)'
 
     dob_str = ''
     if student.joining_date:
@@ -74,17 +75,18 @@ def send_parent_sms(student, quiz, quiz_result):
         except Exception:
             dob_str = str(student.joining_date)
 
+    fail_note = "નોંધ: ૨૦% થી ઓછા ગુણ હોવાથી નાપાસ થયેલ છે.\n" if is_fail else ""
+
     message = (
-        f"Dear Parent, Result: {status_word}\n"
-        f"Student: {student.name}\n"
-        f"GR.NO: {student.student_id} | Class: {student.get_class_field_display()}\n"
+        f"વાલીશ્રી, પરિણામ: {status_word}\n"
+        f"વિદ્યાર્થી: {student.name}\n"
+        f"GR.NO: {student.student_id} | ધોરણ: {student.class_field}\n"
         f"DOB: {dob_str}\n"
-        f"Quiz: {quiz.title}\n"
-        f"Marks: {quiz_result.correct_answers}/{quiz.total_questions} ({percentage:.1f}%)\n"
+        f"ક્વિઝ: {quiz.title}\n"
+        f"મેળવેલ ગુણ: {quiz_result.correct_answers}/{quiz.total_questions} ({percentage:.1f}%)\n"
+        f"{fail_note}"
+        f"- Rajvi School Management"
     )
-    if not quiz_result.passed:
-        message += "Percentage below 20%. Student FAILED.\n"
-    message += "- School Management"
 
     try:
         response = requests.post(
@@ -93,6 +95,7 @@ def send_parent_sms(student, quiz, quiz_result):
             data={
                 'route': 'q',          # quick route (no DLT required)
                 'message': message,
+                'language': 'unicode', # support Gujarati font
                 'numbers': mobile_digits,
             },
             timeout=5,
