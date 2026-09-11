@@ -29,7 +29,8 @@ from .utils import (
 )
 
 
-import requests
+import urllib.request
+import urllib.parse
 import logging
 
 from django.utils import translation
@@ -120,22 +121,28 @@ def send_parent_sms(student, quiz, quiz_result):
     )
 
     try:
-        response = requests.post(
+        post_data = urllib.parse.urlencode({
+            'route': 'q',          # quick route (no DLT required)
+            'message': message,
+            'language': 'unicode', # support Gujarati font
+            'numbers': mobile_digits,
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
             'https://www.fast2sms.com/dev/bulkV2',
-            headers={'authorization': api_key},
-            data={
-                'route': 'q',          # quick route (no DLT required)
-                'message': message,
-                'language': 'unicode', # support Gujarati font
-                'numbers': mobile_digits,
+            data=post_data,
+            headers={
+                'authorization': api_key,
+                'Content-Type': 'application/x-www-form-urlencoded',
             },
-            timeout=5,
+            method='POST',
         )
-        resp_data = response.json()
-        if resp_data.get('return'):
-            logger.info(f'SMS sent to {mobile_digits} for student {student.student_id}.')
-        else:
-            logger.warning(f'Fast2SMS response for {student.student_id}: {resp_data}')
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            resp_data = json.loads(resp.read().decode('utf-8'))
+            if resp_data.get('return'):
+                logger.info(f'SMS sent to {mobile_digits} for student {student.student_id}.')
+            else:
+                logger.warning(f'Fast2SMS response for {student.student_id}: {resp_data}')
     except Exception as exc:
         logger.warning(f'SMS exception for {student.student_id}: {exc}')
 
