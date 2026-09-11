@@ -146,7 +146,7 @@ class Quiz(models.Model):
     description = models.TextField(verbose_name=_('Description'))
     total_questions = models.IntegerField(default=20, validators=[MinValueValidator(1)], verbose_name=_('Total Questions'))
     marks_per_question = models.IntegerField(default=1, validators=[MinValueValidator(1)], verbose_name=_('Marks per Question'))
-    passing_percentage = models.IntegerField(default=50, validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name=_('Passing Percentage'))
+    passing_percentage = models.IntegerField(default=20, validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name=_('Passing Percentage'))
     is_active = models.BooleanField(default=True, verbose_name=_('Is Active'))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

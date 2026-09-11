@@ -57,10 +57,18 @@ def send_parent_sms(student, quiz, quiz_result):
         logger.info('SMS skipped: FAST2SMS_API_KEY not configured.')
         return
 
-    raw_mobile = (student.parent_mobile or '').strip() or (student.phone or '').strip()
-    mobile_digits = ''.join(filter(str.isdigit, raw_mobile))[-10:]
+    # Take student's Mobile No. as shown in "Personal & Academic Details" (student.phone first, then parent_mobile)
+    raw_mobile = (student.phone or '').strip() or (student.parent_mobile or '').strip()
+    digits = ''.join(filter(str.isdigit, raw_mobile))
+    if len(digits) > 10 and digits.startswith('91'):
+        mobile_digits = digits[2:]
+    elif len(digits) > 10 and digits.startswith('0'):
+        mobile_digits = digits[1:]
+    else:
+        mobile_digits = digits[-10:]
+
     if len(mobile_digits) != 10:
-        logger.info(f'SMS skipped: Invalid mobile number ({raw_mobile}) for student {student.student_id}.')
+        logger.warning(f'SMS skipped: Invalid mobile number ({raw_mobile}) for student {student.student_id}.')
         return
 
     # Time-based greeting in Indian Timezone (Asia/Kolkata)
@@ -75,7 +83,8 @@ def send_parent_sms(student, quiz, quiz_result):
 
     total_possible = quiz.get_total_marks()
     percentage = float(quiz_result.percentage)
-    is_fail = (percentage < 20) or (not quiz_result.passed)
+    # 20% passing threshold as requested by school
+    is_fail = (percentage < 20)
 
     # Subject & Quiz separation if delimiter exists in title
     title = quiz.title.strip()
@@ -140,9 +149,12 @@ def send_parent_sms(student, quiz, quiz_result):
         with urllib.request.urlopen(req, timeout=5) as resp:
             resp_data = json.loads(resp.read().decode('utf-8'))
             if resp_data.get('return'):
-                logger.info(f'SMS sent to {mobile_digits} for student {student.student_id}.')
+                logger.info(f'SMS successfully sent to {mobile_digits} for student {student.student_id}. Response: {resp_data}')
             else:
-                logger.warning(f'Fast2SMS response for {student.student_id}: {resp_data}')
+                logger.warning(f'Fast2SMS error response for {student.student_id} ({mobile_digits}): {resp_data}')
+    except urllib.error.HTTPError as http_err:
+        err_body = http_err.read().decode('utf-8', errors='ignore') if hasattr(http_err, 'read') else str(http_err)
+        logger.warning(f'Fast2SMS HTTP Error {http_err.code} for {student.student_id} ({mobile_digits}): {err_body}')
     except Exception as exc:
         logger.warning(f'SMS exception for {student.student_id}: {exc}')
 
@@ -1966,7 +1978,8 @@ def quiz_take(request, pk):
                 (quiz_result.total_marks / Decimal(total_possible)) * 100
                 if total_possible > 0 else Decimal(0)
             )
-            quiz_result.passed = quiz_result.percentage >= quiz.passing_percentage
+            passing_thresh = Decimal(quiz.passing_percentage) if quiz.passing_percentage else Decimal(20)
+            quiz_result.passed = quiz_result.percentage >= passing_thresh
             quiz_result.save()
 
         _update_student_progress(student)
@@ -2009,6 +2022,13 @@ def quiz_result(request, pk):
         student = get_student_for_user(request.user)
         if result.student != student:
             raise Http404
+
+    # Enforce 20% passing requirement
+    passing_target = Decimal(result.quiz.passing_percentage) if (result.quiz and result.quiz.passing_percentage) else Decimal(20)
+    expected_passed = (result.percentage >= passing_target)
+    if result.passed != expected_passed:
+        result.passed = expected_passed
+        result.save(update_fields=['passed'])
 
     student_answers = StudentAnswer.objects.filter(
         quiz_result=result
