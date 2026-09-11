@@ -1,279 +1,246 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% trans "Computer Quizzes" %} — {% trans "Student Management System" %}{% endblock %}
+{% block title %}{% trans "Quiz Management" %} — Rajvi School Management{% endblock %}
 {% block page_title %}{% trans "Quizzes" %}{% endblock %}
 
 {% block extra_css %}
 <style>
-/* Guaranteed Quiz Management Styling */
-.filter-bar {
-  background: var(--clr-surface, #ffffff);
-  border: 1px solid var(--clr-border, #e2e8f0);
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  margin-bottom: 1.5rem;
+/* ── Quiz List Premium Styles ── */
+@keyframes quizHeroShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.hero-quiz {
+  background: linear-gradient(135deg, #1a0533 0%, #4c1d95 40%, #7c3aed 72%, #a855f7 100%);
+  background-size: 300% 300%;
+  animation: quizHeroShift 9s ease infinite;
+  color: #fff;
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 22px;
+  box-shadow: 0 16px 36px -6px rgba(124,58,237,0.45);
+  position: relative;
+  overflow: hidden;
+}
+.hero-quiz::before {
+  content:''; position:absolute;
+  width:220px; height:220px; border-radius:50%;
+  background:rgba(255,255,255,0.06);
+  top:-60px; right:-40px;
+}
+.hero-quiz::after {
+  content:''; position:absolute;
+  width:150px; height:150px; border-radius:50%;
+  background:rgba(255,255,255,0.04);
+  bottom:-50px; left:20px;
+}
+
+/* Filter Bar */
+.quiz-filter-bar {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  margin-bottom: 22px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 12px;
 }
-
-.filter-pills {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
+.filter-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .filter-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.45rem 1rem;
-  border-radius: 9999px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #64748b;
-  background: #f1f5f9;
+  display: inline-flex; align-items: center;
+  padding: 6px 14px; border-radius: 9999px;
+  font-size: 0.8rem; font-weight: 600;
+  color: #64748b; background: #f1f5f9;
   border: 1px solid #e2e8f0;
   text-decoration: none;
   transition: all 0.2s ease;
-  cursor: pointer;
 }
-
-.filter-pill:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #93c5fd;
-  text-decoration: none;
-}
-
-.filter-pill.active {
-  background: #1d4ed8;
-  color: #ffffff;
-  border-color: #1d4ed8;
-  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.3);
-}
+.filter-pill:hover { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; text-decoration: none; }
+.filter-pill.active { background: #4c1d95; color: #fff; border-color: #4c1d95; box-shadow: 0 2px 8px rgba(76,29,149,0.3); }
 
 .filter-search-box {
-  display: flex;
-  align-items: center;
-  background: #f8fafc;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 0 0.75rem;
-  min-width: 260px;
-  transition: all 0.2s ease;
+  display: flex; align-items: center;
+  background: #f8fafc; border: 1.5px solid #cbd5e1;
+  border-radius: 10px; padding: 0 12px;
+  min-width: 240px; transition: all 0.2s;
 }
-
-.filter-search-box:focus-within {
-  border-color: #1d4ed8;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
-}
-
-.filter-search-box i {
-  color: #94a3b8;
-  font-size: 0.9rem;
-  margin-right: 0.5rem;
-}
-
+.filter-search-box:focus-within { border-color: #7c3aed; background: #fff; box-shadow: 0 0 0 3px rgba(124,58,237,0.12); }
+.filter-search-box i { color: #94a3b8; font-size: 0.88rem; margin-right: 8px; }
 .filter-search-box input {
-  border: none;
-  background: transparent;
-  padding: 0.55rem 0;
-  font-size: 0.875rem;
-  color: #0f172a;
-  outline: none;
-  width: 100%;
+  border: none; background: transparent;
+  padding: 8px 0; font-size: 0.875rem; color: #0f172a;
+  outline: none; width: 100%;
 }
 
-.quiz-grid {
+/* Quiz Grid */
+.quiz-grid-premium {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 20px;
   margin-bottom: 2rem;
 }
 
-.quiz-card-modern {
-  background: #ffffff;
-  border-radius: 14px;
+/* Quiz Card */
+.quiz-card {
+  background: #fff;
+  border-radius: 18px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
-
-.quiz-card-modern:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
-  border-color: #93c5fd;
+.quiz-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px rgba(15,23,42,0.1);
+  border-color: #c4b5fd;
 }
+.quiz-card-top-bar { height: 6px; width: 100%; }
+.quiz-card-top-bar.blue   { background: linear-gradient(90deg,#2563eb,#06b6d4); }
+.quiz-card-top-bar.purple { background: linear-gradient(90deg,#7c3aed,#ec4899); }
+.quiz-card-top-bar.green  { background: linear-gradient(90deg,#059669,#0ea5e9); }
+.quiz-card-top-bar.orange { background: linear-gradient(90deg,#ea580c,#eab308); }
 
-.quiz-card-accent {
-  height: 5px;
-  width: 100%;
+.quiz-card-head {
+  padding: 16px 18px 10px;
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 10px;
 }
-.quiz-card-accent.fundamentals { background: linear-gradient(90deg, #2563eb 0%, #06b6d4 100%); }
-.quiz-card-accent.msoffice     { background: linear-gradient(90deg, #7c3aed 0%, #ec4899 100%); }
-.quiz-card-accent.networking   { background: linear-gradient(90deg, #059669 0%, #0ea5e9 100%); }
-.quiz-card-accent.coding       { background: linear-gradient(90deg, #ea580c 0%, #eab308 100%); }
-
-.quiz-card-header {
-  padding: 1.25rem 1.25rem 0.75rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
 .quiz-topic-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  flex-shrink: 0;
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
 }
 .quiz-topic-icon.blue   { background: #eff6ff; color: #2563eb; }
 .quiz-topic-icon.purple { background: #f5f3ff; color: #7c3aed; }
 .quiz-topic-icon.green  { background: #ecfdf5; color: #059669; }
 .quiz-topic-icon.orange { background: #fff7ed; color: #ea580c; }
 
-.quiz-grade-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+.quiz-grade-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: .02em;
 }
-.quiz-grade-tag.std56 { background: #dbeafe; color: #1e40af; }
-.quiz-grade-tag.std78 { background: #ede9fe; color: #5b21b6; }
+.quiz-grade-pill.std56 { background: #dbeafe; color: #1e40af; }
+.quiz-grade-pill.std78 { background: #ede9fe; color: #5b21b6; }
 
-.quiz-card-body {
-  padding: 0 1.25rem 1rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.quiz-card-body { padding: 0 18px 12px; flex: 1; display: flex; flex-direction: column; }
+.quiz-card-title { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 6px; line-height: 1.35; }
+.quiz-card-desc  { font-size: 0.855rem; color: #64748b; line-height: 1.55; flex: 1; margin-bottom: 12px; }
+
+/* Stats Row */
+.quiz-stats-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 6px; padding: 10px 12px;
+  background: #f8fafc; border-radius: 12px;
+  border: 1px solid #f1f5f9; margin-bottom: 2px;
 }
+.quiz-stat-item { text-align: center; }
+.quiz-stat-val { font-size: 0.95rem; font-weight: 800; color: #1e293b; line-height: 1.1; }
+.quiz-stat-lbl { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin-top: 2px; }
 
-.quiz-card-title {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  line-height: 1.35;
-  color: #0f172a;
-  margin-bottom: 0.5rem;
-}
-
-.quiz-card-desc {
-  font-size: 0.875rem;
-  color: #64748b;
-  line-height: 1.5;
-  margin-bottom: 1rem;
-  flex: 1;
-}
-
-.quiz-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #f8fafc;
-  border-radius: 10px;
-  margin-bottom: 0.25rem;
-  border: 1px solid #f1f5f9;
-}
-
-.quiz-metric-item {
-  text-align: center;
-}
-
-.quiz-metric-value {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
-}
-
-.quiz-metric-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.quiz-card-footer {
-  padding: 1rem 1.25rem;
+/* Card Footer */
+.quiz-card-foot {
+  padding: 12px 18px;
   border-top: 1px solid #f1f5f9;
   background: #fafafa;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: flex; align-items: center; gap: 8px;
 }
+.quiz-foot-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 7px 14px; border-radius: 9px;
+  font-size: 0.82rem; font-weight: 700;
+  text-decoration: none; transition: all 0.18s;
+  border: none; cursor: pointer;
+}
+.quiz-foot-btn.primary { background: linear-gradient(135deg,#7c3aed,#9333ea); color: #fff; flex: 1; }
+.quiz-foot-btn.primary:hover { background: linear-gradient(135deg,#6d28d9,#7c3aed); text-decoration:none; }
+.quiz-foot-btn.outline { background: #fff; border: 1.5px solid #e2e8f0; color: #64748b; flex: 1; }
+.quiz-foot-btn.outline:hover { border-color: #7c3aed; color: #7c3aed; text-decoration:none; }
+.quiz-foot-btn.icon { background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; padding: 7px 11px; flex: none; }
+.quiz-foot-btn.icon:hover { background: #fef2f2; border-color: #fecaca; color: #ef4444; text-decoration:none; }
+.quiz-foot-btn.icon.edit:hover { background: #f5f3ff; border-color: #c4b5fd; color: #7c3aed; }
+
+/* Active/Inactive status badge */
+.status-badge {
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700;
+}
+.status-badge.active   { background: #d1fae5; color: #065f46; }
+.status-badge.inactive { background: #f1f5f9; color: #64748b; }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="d-flex justify-between items-center flex-wrap gap-3 mb-5">
-  <div>
-    <div class="d-flex items-center gap-2 mb-1">
-      <h1 class="fs-xl fw-700">
-        {% if is_student_view %}{% trans "Computer Science Quizzes" %}{% else %}{% trans "Quiz Management" %}{% endif %}
-      </h1>
-      <span class="badge badge-primary">{{ total_count }} {% trans "Quizzes" %}</span>
+
+<!-- ── HERO ──────────────────────────────────────────────────────── -->
+<div class="hero-quiz">
+  <div class="d-flex justify-between items-center flex-wrap gap-3" style="position:relative;z-index:1;">
+    <div>
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div style="width:46px;height:46px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">
+          <i class="fas fa-brain"></i>
+        </div>
+        <div>
+          <h1 style="font-size:1.5rem;font-weight:900;color:#fff;margin:0;letter-spacing:-.2px;">
+            {% if is_student_view %}Computer Science Quizzes{% else %}Quiz Management{% endif %}
+          </h1>
+          <div style="color:rgba(255,255,255,0.72);font-size:0.8rem;margin-top:2px;">
+            {% if is_student_view %}
+              ધોરણ ૫ - ૮ | Computer Knowledge Test your skills
+            {% else %}
+              Create, manage and configure interactive quizzes
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-1">
+        <span style="background:rgba(255,255,255,0.15);color:#fff;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          <i class="fas fa-layer-group me-1"></i> {{ total_count }} Quizzes
+        </span>
+        <span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.88);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          <i class="fas fa-percentage me-1"></i> 20% Passing Threshold
+        </span>
+      </div>
     </div>
-    <div class="text-muted fs-sm">
-      {% if is_student_view %}
-        {% trans "Practice and test your computer knowledge from Grade 5 to Grade 8" %}
-      {% else %}
-        {% trans "Create, manage and configure interactive computer quizzes and questions" %}
-      {% endif %}
-    </div>
-  </div>
-  {% if not is_student_view %}
-  <div>
-    <a href="{% url 'quiz_create' %}" class="btn btn-primary">
-      <i class="fas fa-plus-circle me-1"></i>{% trans "Create New Quiz" %}
+    {% if not is_student_view %}
+    <a href="{% url 'quiz_create' %}"
+       style="display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:12px;background:#fff;color:#4c1d95;font-weight:800;font-size:0.9rem;text-decoration:none;box-shadow:0 6px 16px rgba(0,0,0,0.2);transition:all 0.2s;"
+       onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='#fff'">
+      <i class="fas fa-plus-circle"></i> Create New Quiz
     </a>
+    {% endif %}
   </div>
-  {% endif %}
 </div>
 
-<!-- Search and Category Filter Bar -->
-<div class="filter-bar">
+<!-- ── FILTER BAR ─────────────────────────────────────────────────── -->
+<div class="quiz-filter-bar">
   <div class="filter-pills">
-    <a href="?category=all{% if search_query %}&search={{ search_query }}{% endif %}" 
+    <a href="?category=all{% if search_query %}&search={{ search_query }}{% endif %}"
        class="filter-pill {% if active_category == 'all' or not active_category %}active{% endif %}">
-      <i class="fas fa-layer-group me-1"></i>{% trans "All Quizzes" %}
+      <i class="fas fa-layer-group me-1"></i>All Quizzes
     </a>
-    <a href="?category=std56{% if search_query %}&search={{ search_query }}{% endif %}" 
+    <a href="?category=std56{% if search_query %}&search={{ search_query }}{% endif %}"
        class="filter-pill {% if active_category == 'std56' %}active{% endif %}">
-      <i class="fas fa-laptop me-1"></i>{% trans "STD 5-6 Basics" %}
+      <i class="fas fa-laptop me-1"></i>STD 5-6 Basics
     </a>
-    <a href="?category=msoffice{% if search_query %}&search={{ search_query }}{% endif %}" 
+    <a href="?category=msoffice{% if search_query %}&search={{ search_query }}{% endif %}"
        class="filter-pill {% if active_category == 'msoffice' %}active{% endif %}">
-      <i class="fas fa-file-word me-1"></i>{% trans "MS Office (Word/Excel/PPT)" %}
+      <i class="fas fa-file-word me-1"></i>MS Office
     </a>
-    <a href="?category=networking{% if search_query %}&search={{ search_query }}{% endif %}" 
+    <a href="?category=networking{% if search_query %}&search={{ search_query }}{% endif %}"
        class="filter-pill {% if active_category == 'networking' %}active{% endif %}">
-      <i class="fas fa-network-wired me-1"></i>{% trans "Internet & Networking" %}
+      <i class="fas fa-network-wired me-1"></i>Internet &amp; Networking
     </a>
-    <a href="?category=coding{% if search_query %}&search={{ search_query }}{% endif %}" 
+    <a href="?category=coding{% if search_query %}&search={{ search_query }}{% endif %}"
        class="filter-pill {% if active_category == 'coding' %}active{% endif %}">
-      <i class="fas fa-code me-1"></i>{% trans "Coding & Logic" %}
+      <i class="fas fa-code me-1"></i>Coding &amp; Logic
     </a>
   </div>
 
@@ -282,51 +249,52 @@
       <input type="hidden" name="category" value="{{ active_category }}">
     {% endif %}
     <i class="fas fa-search"></i>
-    <input type="text" name="search" value="{{ search_query }}" placeholder="{% trans 'Search quiz topic...' %}" autocomplete="off">
+    <input type="text" name="search" value="{{ search_query }}" placeholder="Search quiz topic…" autocomplete="off">
     {% if search_query %}
-      <a href="?category={{ active_category }}" class="text-muted fs-xs me-1" title="{% trans 'Clear search' %}">
+      <a href="?category={{ active_category }}" style="color:#94a3b8;font-size:0.85rem;text-decoration:none;padding:4px;">
         <i class="fas fa-times"></i>
       </a>
     {% endif %}
   </form>
 </div>
 
-<!-- Quizzes Grid -->
+<!-- ── QUIZ CARDS ─────────────────────────────────────────────────── -->
 {% if quizzes %}
-  <div class="quiz-grid">
+  <div class="quiz-grid-premium">
     {% for quiz in quizzes %}
-    <div class="quiz-card-modern">
-      <!-- Top Topic Accent Line -->
-      {% if 'STD 5-6' in quiz.title or 'ધોરણ ૫-૬' in quiz.title or 'Basics' in quiz.title or 'Fundamentals' in quiz.title or 'Input' in quiz.title or 'Output' in quiz.title or 'Hardware' in quiz.title or 'Paint' in quiz.title or 'Safety' in quiz.title or 'Windows' in quiz.title or 'પરિચય' in quiz.title or 'ઇનપુટ' in quiz.title or 'આઉટપુટ' in quiz.title or 'હાર્ડવેર' in quiz.title or 'પેઇન્ટ' in quiz.title or 'વિન્ડોઝ' in quiz.title %}
-        <div class="quiz-card-accent fundamentals"></div>
-      {% elif 'Word' in quiz.title or 'Excel' in quiz.title or 'PowerPoint' in quiz.title or 'વર્ડ' in quiz.title or 'એક્સેલ' in quiz.title or 'પાવરપોઇન્ટ' in quiz.title %}
-        <div class="quiz-card-accent msoffice"></div>
-      {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title or 'Cyber' in quiz.title or 'Security' in quiz.title or 'નેટવર્ક' in quiz.title or 'ઇન્ટરનેટ' in quiz.title or 'મેઇલ' in quiz.title or 'સાયબર' in quiz.title %}
-        <div class="quiz-card-accent networking"></div>
+    <div class="quiz-card">
+      <!-- Top colour bar -->
+      {% if 'Excel' in quiz.title or 'এক্সেল' in quiz.title or 'STD 5' in quiz.title or 'Basics' in quiz.title or 'Fundamentals' in quiz.title or 'Hardware' in quiz.title or 'Windows' in quiz.title or 'Paint' in quiz.title or 'Input' in quiz.title or 'Output' in quiz.title %}
+        <div class="quiz-card-top-bar blue"></div>
+      {% elif 'Word' in quiz.title or 'PowerPoint' in quiz.title or 'Excel' in quiz.title %}
+        <div class="quiz-card-top-bar purple"></div>
+      {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title or 'Cyber' in quiz.title %}
+        <div class="quiz-card-top-bar green"></div>
       {% else %}
-        <div class="quiz-card-accent coding"></div>
+        <div class="quiz-card-top-bar orange"></div>
       {% endif %}
 
       <!-- Card Header -->
-      <div class="quiz-card-header">
-        <div class="d-flex items-center gap-3">
-          {% if 'Excel' in quiz.title or 'એક્સેલ' in quiz.title %}
+      <div class="quiz-card-head">
+        <div class="d-flex align-items-center gap-3">
+          <!-- Dynamic Icon -->
+          {% if 'Excel' in quiz.title %}
             <div class="quiz-topic-icon green"><i class="fas fa-file-excel"></i></div>
-          {% elif 'Word' in quiz.title or 'વર્ડ' in quiz.title %}
+          {% elif 'Word' in quiz.title %}
             <div class="quiz-topic-icon blue"><i class="fas fa-file-word"></i></div>
-          {% elif 'PowerPoint' in quiz.title or 'પાવરપોઇન્ટ' in quiz.title %}
+          {% elif 'PowerPoint' in quiz.title %}
             <div class="quiz-topic-icon orange"><i class="fas fa-file-powerpoint"></i></div>
-          {% elif 'Paint' in quiz.title or 'પેઇન્ટ' in quiz.title %}
+          {% elif 'Paint' in quiz.title %}
             <div class="quiz-topic-icon purple"><i class="fas fa-palette"></i></div>
-          {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Mail' in quiz.title or 'Email' in quiz.title or 'નેટવર્ક' in quiz.title or 'ઇન્ટરનેટ' in quiz.title or 'મેઇલ' in quiz.title %}
+          {% elif 'Network' in quiz.title or 'Internet' in quiz.title or 'Email' in quiz.title or 'Mail' in quiz.title %}
             <div class="quiz-topic-icon green"><i class="fas fa-wifi"></i></div>
-          {% elif 'Cyber' in quiz.title or 'Security' in quiz.title or 'Safety' in quiz.title or 'સુરક્ષા' in quiz.title or 'સાયબર' in quiz.title %}
+          {% elif 'Cyber' in quiz.title or 'Security' in quiz.title or 'Safety' in quiz.title %}
             <div class="quiz-topic-icon blue"><i class="fas fa-shield-alt"></i></div>
-          {% elif 'Coding' in quiz.title or 'Algorithm' in quiz.title or 'Logic' in quiz.title or 'કોડિંગ' in quiz.title or 'અલ્ગોરિધમ' in quiz.title %}
+          {% elif 'Coding' in quiz.title or 'Algorithm' in quiz.title or 'Logic' in quiz.title %}
             <div class="quiz-topic-icon orange"><i class="fas fa-code"></i></div>
-          {% elif 'Keyboard' in quiz.title or 'Shortcut' in quiz.title or 'કીબોર્ડ' in quiz.title %}
+          {% elif 'Keyboard' in quiz.title or 'Shortcut' in quiz.title %}
             <div class="quiz-topic-icon blue"><i class="fas fa-keyboard"></i></div>
-          {% elif 'Storage' in quiz.title or 'RAM' in quiz.title or 'મેમરી' in quiz.title %}
+          {% elif 'Storage' in quiz.title or 'RAM' in quiz.title %}
             <div class="quiz-topic-icon purple"><i class="fas fa-memory"></i></div>
           {% else %}
             <div class="quiz-topic-icon blue"><i class="fas fa-desktop"></i></div>
@@ -334,64 +302,64 @@
 
           <div>
             {% if 'STD 5-6' in quiz.title or 'ધોરણ ૫-૬' in quiz.title %}
-              <span class="quiz-grade-tag std56"><i class="fas fa-graduation-cap"></i> ધોરણ ૫ - ૬</span>
-            {% elif 'STD 6-8' in quiz.title or 'STD 7-8' in quiz.title or 'STD 5-7' in quiz.title or 'STD 6-7' in quiz.title or 'ધોરણ ૭-૮' in quiz.title or 'ધોરણ ૬-૮' in quiz.title or 'ધોરણ ૬-૭' in quiz.title or 'ધોરણ ૫-૭' in quiz.title %}
-              <span class="quiz-grade-tag std78"><i class="fas fa-graduation-cap"></i> ધોરણ ૭ - ૮</span>
+              <span class="quiz-grade-pill std56"><i class="fas fa-graduation-cap"></i> ધોરણ ૫ - ૬</span>
+            {% elif 'STD 7-8' in quiz.title or 'STD 6-8' in quiz.title or 'ધોરણ ૭-૮' in quiz.title or 'ધોરણ ૬-૮' in quiz.title %}
+              <span class="quiz-grade-pill std78"><i class="fas fa-graduation-cap"></i> ધોરણ ૭ - ૮</span>
             {% else %}
-              <span class="quiz-grade-tag std56"><i class="fas fa-book"></i> ધોરણ ૫ - ૮</span>
+              <span class="quiz-grade-pill std56"><i class="fas fa-book"></i> ધોરણ ૫ - ૮</span>
             {% endif %}
           </div>
         </div>
 
         {% if quiz.is_active %}
-          <span class="badge badge-success"><i class="fas fa-check-circle"></i> {% trans "Active" %}</span>
+          <span class="status-badge active"><i class="fas fa-check-circle me-1"></i>Active</span>
         {% else %}
-          <span class="badge badge-muted">{% trans "Inactive" %}</span>
+          <span class="status-badge inactive">Inactive</span>
         {% endif %}
       </div>
 
       <!-- Card Body -->
       <div class="quiz-card-body">
         <h3 class="quiz-card-title" title="{{ quiz.title }}">{{ quiz.title }}</h3>
-        <p class="quiz-card-desc">{{ quiz.description|default:"Test your knowledge with 20 comprehensive questions and answers." }}</p>
+        <p class="quiz-card-desc">{{ quiz.description|default:"Test your knowledge with comprehensive questions covering key computer concepts." }}</p>
 
-        <!-- Metrics Grid -->
-        <div class="quiz-metrics-grid">
-          <div class="quiz-metric-item">
-            <div class="quiz-metric-value">{{ quiz.questions.count }} / {{ quiz.total_questions }}</div>
-            <div class="quiz-metric-label">{% trans "Questions" %}</div>
+        <!-- Stats row -->
+        <div class="quiz-stats-row">
+          <div class="quiz-stat-item">
+            <div class="quiz-stat-val">{{ quiz.questions.count }}<span style="font-size:0.7rem;font-weight:600;color:#94a3b8;"> / {{ quiz.total_questions }}</span></div>
+            <div class="quiz-stat-lbl">Questions</div>
           </div>
-          <div class="quiz-metric-item">
-            <div class="quiz-metric-value">{{ quiz.get_total_marks }}</div>
-            <div class="quiz-metric-label">{% trans "Total Marks" %}</div>
+          <div class="quiz-stat-item">
+            <div class="quiz-stat-val" style="color:#7c3aed;">{{ quiz.get_total_marks }}</div>
+            <div class="quiz-stat-lbl">Total Marks</div>
           </div>
-          <div class="quiz-metric-item">
-            <div class="quiz-metric-value">{{ quiz.passing_percentage }}%</div>
-            <div class="quiz-metric-label">{% trans "Passing" %}</div>
+          <div class="quiz-stat-item">
+            <div class="quiz-stat-val" style="color:#059669;">{{ quiz.passing_percentage }}%</div>
+            <div class="quiz-stat-lbl">Passing</div>
           </div>
         </div>
       </div>
 
       <!-- Card Footer -->
-      <div class="quiz-card-footer">
+      <div class="quiz-card-foot">
         {% if is_student_view %}
           {% if quiz.id in taken_ids %}
-            <a href="{% url 'quiz_take' quiz.pk %}" class="btn btn-outline btn-sm w-100 justify-center">
-              <i class="fas fa-redo me-1"></i>{% trans "Retake Quiz" %}
+            <a href="{% url 'quiz_take' quiz.pk %}" class="quiz-foot-btn outline">
+              <i class="fas fa-redo"></i> Retake Quiz
             </a>
           {% else %}
-            <a href="{% url 'quiz_take' quiz.pk %}" class="btn btn-primary btn-sm w-100 justify-center">
-              <i class="fas fa-play me-1"></i>{% trans "Start Quiz" %}
+            <a href="{% url 'quiz_take' quiz.pk %}" class="quiz-foot-btn primary">
+              <i class="fas fa-play"></i> Start Quiz
             </a>
           {% endif %}
         {% else %}
-          <a href="{% url 'quiz_questions' quiz.pk %}" class="btn btn-outline btn-sm flex-1 justify-center">
-            <i class="fas fa-list-check me-1"></i>{% trans "Questions" %}
+          <a href="{% url 'quiz_questions' quiz.pk %}" class="quiz-foot-btn outline">
+            <i class="fas fa-list-check"></i> Questions
           </a>
-          <a href="{% url 'quiz_edit' quiz.pk %}" class="btn btn-ghost btn-sm btn-icon" title="{% trans 'Edit Quiz' %}">
+          <a href="{% url 'quiz_edit' quiz.pk %}" class="quiz-foot-btn icon edit" title="Edit Quiz">
             <i class="fas fa-edit"></i>
           </a>
-          <a href="{% url 'quiz_delete' quiz.pk %}" class="btn btn-ghost btn-sm btn-icon text-danger" title="{% trans 'Delete Quiz' %}">
+          <a href="{% url 'quiz_delete' quiz.pk %}" class="quiz-foot-btn icon" title="Delete Quiz">
             <i class="fas fa-trash"></i>
           </a>
         {% endif %}
@@ -402,40 +370,40 @@
 
   <!-- Pagination -->
   {% if quizzes.has_other_pages %}
-    <div class="pagination justify-center mt-6 mb-6">
+    <div class="pagination justify-center mt-4 mb-6">
       {% if quizzes.has_previous %}
-        <a class="page-link" href="?page=1{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" title="{% trans 'First Page' %}">&laquo;</a>
+        <a class="page-link" href="?page=1{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">&laquo;</a>
         <a class="page-link" href="?page={{ quizzes.previous_page_number }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">&lsaquo;</a>
       {% endif %}
-
       {% for num in quizzes.paginator.page_range %}
         <a class="page-link {% if quizzes.number == num %}active{% endif %}" href="?page={{ num }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
       {% endfor %}
-
       {% if quizzes.has_next %}
         <a class="page-link" href="?page={{ quizzes.next_page_number }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">&rsaquo;</a>
-        <a class="page-link" href="?page={{ quizzes.paginator.num_pages }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" title="{% trans 'Last Page' %}">&raquo;</a>
+        <a class="page-link" href="?page={{ quizzes.paginator.num_pages }}{% if active_category %}&category={{ active_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">&raquo;</a>
       {% endif %}
     </div>
   {% endif %}
 
 {% else %}
-  <div class="card">
-    <div class="empty-state">
-      <div class="empty-icon"><i class="fas fa-search text-muted"></i></div>
-      <div class="empty-title fs-lg">{% trans "No matching quizzes found." %}</div>
-      <p class="empty-desc mt-1">{% trans "Try selecting another topic filter or clearing your search keywords." %}</p>
-      <div class="mt-4 d-flex justify-center gap-2">
-        <a href="{% url 'quiz_list' %}" class="btn btn-outline btn-sm">
-          <i class="fas fa-redo me-1"></i>{% trans "View All Quizzes" %}
+  <!-- Empty State -->
+  <div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:56px 24px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
+    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#7c3aed;margin:0 auto 18px;">
+      <i class="fas fa-search"></i>
+    </div>
+    <div style="font-weight:800;font-size:1.05rem;color:#1e293b;margin-bottom:6px;">No matching quizzes found.</div>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:22px;">Try selecting another topic filter or clearing your search keywords.</p>
+    <div class="d-flex justify-center gap-2">
+      <a href="{% url 'quiz_list' %}" class="btn btn-outline btn-sm">
+        <i class="fas fa-redo me-1"></i>View All Quizzes
+      </a>
+      {% if not is_student_view %}
+        <a href="{% url 'quiz_create' %}" class="btn btn-primary btn-sm" style="background:#7c3aed;border-color:#7c3aed;">
+          <i class="fas fa-plus-circle me-1"></i>Create Quiz
         </a>
-        {% if not is_student_view %}
-          <a href="{% url 'quiz_create' %}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus-circle me-1"></i>{% trans "Create Quiz" %}
-          </a>
-        {% endif %}
-      </div>
+      {% endif %}
     </div>
   </div>
 {% endif %}
+
 {% endblock %}

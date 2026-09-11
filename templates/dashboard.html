@@ -1,259 +1,384 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% trans "Admin Dashboard" %} — {% trans "Student Management System" %}{% endblock %}
+{% block title %}{% trans "Admin Dashboard" %} — Rajvi School Management{% endblock %}
 {% block page_title %}{% trans "Dashboard Overview" %}{% endblock %}
 
+{% block extra_css %}
+<style>
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.hero-dashboard {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 40%, #1d4ed8 70%, #0ea5e9 100%);
+  background-size: 300% 300%;
+  animation: gradientShift 8s ease infinite;
+  color: #fff;
+  border-radius: 20px;
+  padding: 32px 36px;
+  box-shadow: 0 20px 40px -8px rgba(29,78,216,0.45);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.hero-dashboard::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+}
+.hero-dashboard::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: -30px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+.stat-card-premium {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card-premium::after {
+  content:'';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  border-radius: 16px 0 0 16px;
+}
+.stat-card-premium.blue::after   { background: linear-gradient(180deg,#3b82f6,#1d4ed8); }
+.stat-card-premium.green::after  { background: linear-gradient(180deg,#10b981,#059669); }
+.stat-card-premium.red::after    { background: linear-gradient(180deg,#ef4444,#dc2626); }
+.stat-card-premium.cyan::after   { background: linear-gradient(180deg,#06b6d4,#0891b2); }
+.stat-card-premium:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
+.stat-icon-box {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; flex-shrink: 0;
+}
+.stat-icon-box.blue   { background: #eff6ff; color: #2563eb; }
+.stat-icon-box.green  { background: #ecfdf5; color: #059669; }
+.stat-icon-box.red    { background: #fef2f2; color: #dc2626; }
+.stat-icon-box.cyan   { background: #ecfeff; color: #0891b2; }
+
+.class-dist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.class-dist-card {
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.class-dist-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.12); text-decoration: none; }
+.class-dist-card.c5 { background: linear-gradient(135deg,#eef2ff,#dbeafe); border: 1px solid #c7d2fe; }
+.class-dist-card.c6 { background: linear-gradient(135deg,#f0fdf4,#dcfce7); border: 1px solid #bbf7d0; }
+.class-dist-card.c7 { background: linear-gradient(135deg,#fffbeb,#fef3c7); border: 1px solid #fde68a; }
+.class-dist-card.c8 { background: linear-gradient(135deg,#fdf4ff,#f3e8ff); border: 1px solid #e9d5ff; }
+.class-big-num { font-size: 2.25rem; font-weight: 900; line-height: 1; }
+.class-big-num.c5 { color: #4338ca; }
+.class-big-num.c6 { color: #15803d; }
+.class-big-num.c7 { color: #b45309; }
+.class-big-num.c8 { color: #7e22ce; }
+.class-icon-bg {
+  width: 52px; height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+}
+.class-icon-bg.c5 { background: #e0e7ff; color: #4338ca; }
+.class-icon-bg.c6 { background: #bbf7d0; color: #15803d; }
+.class-icon-bg.c7 { background: #fde68a; color: #b45309; }
+.class-icon-bg.c8 { background: #e9d5ff; color: #7e22ce; }
+
+.section-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.section-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid #f1f5f9; background: #fafbfc;
+}
+.section-card-title { font-weight: 700; font-size: 0.9375rem; color: #1e293b; }
+.section-card-body { padding: 20px; }
+
+.fee-block {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; border-radius: 12px; margin-bottom: 12px;
+}
+.fee-block.collected { background: linear-gradient(135deg,#f0fdf4,#dcfce7); border: 1px solid #bbf7d0; }
+.fee-block.pending   { background: linear-gradient(135deg,#fef2f2,#fee2e2); border: 1px solid #fecaca; }
+.fee-block-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+}
+.fee-block-icon.collected { background: #dcfce7; color: #16a34a; }
+.fee-block-icon.pending   { background: #fee2e2; color: #dc2626; }
+
+.results-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.results-table thead tr { background: linear-gradient(90deg,#1e3a8a,#2563eb); color: #fff; }
+.results-table thead th { padding: 11px 14px; font-weight: 700; letter-spacing: .4px; }
+.results-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+.results-table tbody tr:hover { background: #f8faff; }
+.results-table tbody td { padding: 10px 14px; color: #374151; }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- ─── Hero Welcome Banner & Actions ────────────────────────── -->
-<div class="welcome-banner mb-4" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%); color: white; border-radius: 16px; padding: 24px 28px; box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);">
-  <div class="d-flex justify-between items-center flex-wrap gap-3">
+
+<!-- HERO -->
+<div class="hero-dashboard">
+  <div class="d-flex justify-between items-center flex-wrap gap-3" style="position:relative;z-index:1;">
     <div>
-      <div class="d-flex align-items-center gap-2 mb-1">
-        <span class="badge" style="background: rgba(255,255,255,0.2); color: #fff; font-size: 0.75rem; padding: 4px 10px; border-radius: 20px;">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span style="background:rgba(255,255,255,0.18);color:#fff;font-size:0.72rem;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase;">
           <i class="fas fa-shield-alt me-1"></i> Admin Portal
         </span>
-        <span class="text-white-50 fs-xs">•</span>
-        <span class="fs-xs" style="color: rgba(255,255,255,0.85);"><i class="far fa-calendar-alt me-1"></i> {% now "l, d F Y" %}</span>
+        <span style="color:rgba(255,255,255,0.65);font-size:0.8rem;">
+          <i class="far fa-calendar-alt me-1"></i> {% now "l, d F Y" %}
+        </span>
       </div>
-      <h1 class="fs-xl fw-800 text-white mb-1">{% trans "Welcome to EduManage Dashboard" %} 👋</h1>
-      <p class="fs-xs mb-0" style="color: rgba(255,255,255,0.85);">
-        {% trans "Manage your students, classes, quizzes, and school records all in one place." %}
+      <h1 style="font-size:1.75rem;font-weight:900;color:#fff;margin-bottom:6px;letter-spacing:-.3px;">
+        🏫 Rajvi School Management
+      </h1>
+      <p style="color:rgba(255,255,255,0.78);font-size:0.88rem;margin:0 0 12px;">
+        ✨ Students, Classes, Quizzes &amp; Fees — એક જ જગ્યાએ સંચાલિત
       </p>
+      <div class="d-flex flex-wrap gap-2">
+        <span style="background:rgba(255,255,255,0.14);color:#fff;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          <i class="fas fa-users me-1"></i> {{ total_students }} Students
+        </span>
+        <span style="background:rgba(16,185,129,0.28);color:#6ee7b7;padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          <i class="fas fa-check-circle me-1"></i> {{ active_students }} Active
+        </span>
+        <span style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.88);padding:5px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+          <i class="fas fa-trophy me-1"></i> Avg {{ avg_score }}% Quiz Score
+        </span>
+      </div>
     </div>
-
-    <!-- Quick Action Buttons -->
-    <div class="d-flex items-center gap-2 flex-wrap">
-      <a href="{% url 'student_create' %}" class="btn btn-sm fw-600" style="background: #ffffff; color: #1e3a8a; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-        <i class="fas fa-user-plus text-primary me-1"></i> {% trans "Add Student" %}
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'student_create' %}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;background:#fff;color:#1e3a8a;font-weight:700;font-size:0.82rem;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:all 0.2s;"
+         onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'">
+        <i class="fas fa-user-plus"></i> Add Student
       </a>
-      <a href="{% url 'student_csv_import' %}" class="btn btn-sm fw-600" style="background: #10b981; color: white; border: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-        <i class="fas fa-file-excel me-1"></i> {% trans "Import Excel" %}
+      <a href="{% url 'student_csv_import' %}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;background:#10b981;color:#fff;font-weight:700;font-size:0.82rem;text-decoration:none;box-shadow:0 4px 12px rgba(16,185,129,0.35);">
+        <i class="fas fa-file-excel"></i> Import Excel
       </a>
-      <a href="{% url 'quiz_create' %}" class="btn btn-sm fw-600" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);">
-        <i class="fas fa-plus-circle me-1"></i> {% trans "Create Quiz" %}
+      <a href="{% url 'quiz_create' %}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-weight:700;font-size:0.82rem;text-decoration:none;">
+        <i class="fas fa-plus-circle"></i> Create Quiz
       </a>
-      <a href="{% url 'fee_create' %}" class="btn btn-sm fw-600" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);">
-        <i class="fas fa-receipt me-1"></i> {% trans "Add Fee" %}
+      <a href="{% url 'fee_create' %}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-weight:700;font-size:0.82rem;text-decoration:none;">
+        <i class="fas fa-receipt"></i> Add Fee
       </a>
     </div>
   </div>
 </div>
 
-<!-- ─── Core Stat Cards ──────────────────────────────────────── -->
-<div class="stat-cards mb-4">
-  <div class="stat-card" style="border-left: 4px solid #3b82f6;">
-    <div class="stat-icon blue">
-      <i class="fas fa-users"></i>
-    </div>
+<!-- STAT CARDS -->
+<div class="stat-grid">
+  <div class="stat-card-premium blue">
+    <div class="stat-icon-box blue"><i class="fas fa-users"></i></div>
     <div>
-      <div class="stat-label">{% trans "Total Students" %}</div>
-      <div class="stat-value">{{ total_students }}</div>
-      <div class="fs-xs text-muted mt-1"><i class="fas fa-check-circle text-success me-1"></i>{{ active_students }} {% trans "Active" %}</div>
+      <div style="font-size:1.75rem;font-weight:900;color:#0f172a;line-height:1;">{{ total_students }}</div>
+      <div style="font-size:0.8rem;font-weight:700;color:#64748b;margin-top:2px;">Total Students</div>
+      <div style="font-size:0.72rem;color:#94a3b8;margin-top:3px;"><i class="fas fa-check-circle text-success me-1"></i>{{ active_students }} Active</div>
     </div>
   </div>
-
-  <div class="stat-card" style="border-left: 4px solid #10b981;">
-    <div class="stat-icon green">
-      <i class="fas fa-wallet"></i>
-    </div>
+  <div class="stat-card-premium green">
+    <div class="stat-icon-box green"><i class="fas fa-wallet"></i></div>
     <div>
-      <div class="stat-label">{% trans "Collected Fees" %}</div>
-      <div class="stat-value text-success">₹ {{ collected_fees }}</div>
-      <div class="fs-xs text-muted mt-1">{% trans "Received to date" %}</div>
+      <div style="font-size:1.75rem;font-weight:900;color:#059669;line-height:1;">₹{{ collected_fees }}</div>
+      <div style="font-size:0.8rem;font-weight:700;color:#64748b;margin-top:2px;">Fees Collected</div>
+      <div style="font-size:0.72rem;color:#94a3b8;margin-top:3px;">Received to date</div>
     </div>
   </div>
-
-  <div class="stat-card" style="border-left: 4px solid #ef4444;">
-    <div class="stat-icon red">
-      <i class="fas fa-money-bill-wave"></i>
-    </div>
+  <div class="stat-card-premium red">
+    <div class="stat-icon-box red"><i class="fas fa-money-bill-wave"></i></div>
     <div>
-      <div class="stat-label">{% trans "Pending Fees" %}</div>
-      <div class="stat-value text-danger">₹ {{ pending_fees }}</div>
-      <div class="fs-xs text-muted mt-1">{% trans "Receivables" %}</div>
+      <div style="font-size:1.75rem;font-weight:900;color:#dc2626;line-height:1;">₹{{ pending_fees }}</div>
+      <div style="font-size:0.8rem;font-weight:700;color:#64748b;margin-top:2px;">Pending Fees</div>
+      <div style="font-size:0.72rem;color:#94a3b8;margin-top:3px;">Receivables outstanding</div>
     </div>
   </div>
-
-  <div class="stat-card" style="border-left: 4px solid #06b6d4;">
-    <div class="stat-icon cyan">
-      <i class="fas fa-trophy"></i>
-    </div>
+  <div class="stat-card-premium cyan">
+    <div class="stat-icon-box cyan"><i class="fas fa-trophy"></i></div>
     <div>
-      <div class="stat-label">{% trans "Average Quiz Score" %}</div>
-      <div class="stat-value">{{ avg_score }}%</div>
-      <div class="fs-xs text-muted mt-1"><i class="fas fa-tasks text-primary me-1"></i>{{ total_tests_taken }} {% trans "Attempts" %}</div>
+      <div style="font-size:1.75rem;font-weight:900;color:#0891b2;line-height:1;">{{ avg_score }}%</div>
+      <div style="font-size:0.8rem;font-weight:700;color:#64748b;margin-top:2px;">Avg Quiz Score</div>
+      <div style="font-size:0.72rem;color:#94a3b8;margin-top:3px;"><i class="fas fa-tasks me-1" style="color:#0891b2;"></i>{{ total_tests_taken }} Attempts</div>
     </div>
   </div>
 </div>
 
-<!-- ─── Class-wise Breakdown Banner ──────────────────────────── -->
-<div class="card mb-4">
-  <div class="card-header justify-between py-3">
-    <div class="card-title fs-sm fw-700">
-      <i class="fas fa-layer-group text-primary me-2"></i>{% trans "Class Enrollment Distribution (ધોરણ મુજબ વિદ્યાર્થીઓની સંખ્યા)" %}
+<!-- CLASS DISTRIBUTION -->
+<div class="section-card">
+  <div class="section-card-header">
+    <div class="section-card-title">
+      <i class="fas fa-layer-group text-primary me-2"></i>ધોરણ મુજબ વિદ્યાર્થીઓ (Class Enrollment)
     </div>
-    <a href="{% url 'student_list' %}" class="btn btn-ghost btn-sm">{% trans "View All Students" %} &rarr;</a>
+    <a href="{% url 'student_list' %}" style="font-size:0.82rem;font-weight:600;color:#2563eb;text-decoration:none;">View All Students →</a>
   </div>
-  <div class="card-body p-3">
-    <div class="d-grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-      
-      <a href="{% url 'student_list' %}?class=5" class="d-flex align-items-center justify-content-between p-3 rounded-3 text-decoration-none" style="background: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.2s ease;">
+  <div class="section-card-body">
+    <div class="class-dist-grid">
+      <a href="{% url 'student_list' %}?class=5" class="class-dist-card c5">
         <div>
-          <span class="badge" style="background: #e0e7ff; color: #4338ca; font-weight: 700; font-size: 0.75rem;">Grade 5 (ધોરણ ૫)</span>
-          <div class="fs-xl fw-800 text-dark mt-2">{{ class_counts.5 }}</div>
-          <div class="fs-xs text-muted">{% trans "Students" %}</div>
+          <span style="background:#e0e7ff;color:#4338ca;font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px;">Grade 5 (ધોરણ ૫)</span>
+          <div class="class-big-num c5 mt-2">{{ class_counts.5 }}</div>
+          <div style="font-size:0.75rem;color:#64748b;font-weight:600;margin-top:2px;">Students enrolled</div>
         </div>
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          <i class="fas fa-user-graduate"></i>
-        </div>
+        <div class="class-icon-bg c5"><i class="fas fa-user-graduate"></i></div>
       </a>
-
-      <a href="{% url 'student_list' %}?class=6" class="d-flex align-items-center justify-content-between p-3 rounded-3 text-decoration-none" style="background: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.2s ease;">
+      <a href="{% url 'student_list' %}?class=6" class="class-dist-card c6">
         <div>
-          <span class="badge" style="background: #dbeafe; color: #1d4ed8; font-weight: 700; font-size: 0.75rem;">Grade 6 (ધોરણ ૬)</span>
-          <div class="fs-xl fw-800 text-dark mt-2">{{ class_counts.6 }}</div>
-          <div class="fs-xs text-muted">{% trans "Students" %}</div>
+          <span style="background:#bbf7d0;color:#15803d;font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px;">Grade 6 (ધોરણ ૬)</span>
+          <div class="class-big-num c6 mt-2">{{ class_counts.6 }}</div>
+          <div style="font-size:0.75rem;color:#64748b;font-weight:600;margin-top:2px;">Students enrolled</div>
         </div>
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          <i class="fas fa-user-graduate"></i>
-        </div>
+        <div class="class-icon-bg c6"><i class="fas fa-user-graduate"></i></div>
       </a>
-
-      <a href="{% url 'student_list' %}?class=7" class="d-flex align-items-center justify-content-between p-3 rounded-3 text-decoration-none" style="background: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.2s ease;">
+      <a href="{% url 'student_list' %}?class=7" class="class-dist-card c7">
         <div>
-          <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 0.75rem;">Grade 7 (ધોરણ ૭)</span>
-          <div class="fs-xl fw-800 text-dark mt-2">{{ class_counts.7 }}</div>
-          <div class="fs-xs text-muted">{% trans "Students" %}</div>
+          <span style="background:#fde68a;color:#b45309;font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px;">Grade 7 (ધોરણ ૭)</span>
+          <div class="class-big-num c7 mt-2">{{ class_counts.7 }}</div>
+          <div style="font-size:0.75rem;color:#64748b;font-weight:600;margin-top:2px;">Students enrolled</div>
         </div>
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          <i class="fas fa-user-graduate"></i>
-        </div>
+        <div class="class-icon-bg c7"><i class="fas fa-user-graduate"></i></div>
       </a>
-
-      <a href="{% url 'student_list' %}?class=8" class="d-flex align-items-center justify-content-between p-3 rounded-3 text-decoration-none" style="background: #f8fafc; border: 1px solid #e2e8f0; transition: all 0.2s ease;">
+      <a href="{% url 'student_list' %}?class=8" class="class-dist-card c8">
         <div>
-          <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 0.75rem;">Grade 8 (ધોરણ ૮)</span>
-          <div class="fs-xl fw-800 text-dark mt-2">{{ class_counts.8 }}</div>
-          <div class="fs-xs text-muted">{% trans "Students" %}</div>
+          <span style="background:#e9d5ff;color:#7e22ce;font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:20px;">Grade 8 (ધોરણ ૮)</span>
+          <div class="class-big-num c8 mt-2">{{ class_counts.8 }}</div>
+          <div style="font-size:0.75rem;color:#64748b;font-weight:600;margin-top:2px;">Students enrolled</div>
         </div>
-        <div style="width: 44px; height: 44px; border-radius: 12px; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          <i class="fas fa-user-graduate"></i>
-        </div>
+        <div class="class-icon-bg c8"><i class="fas fa-user-graduate"></i></div>
       </a>
-
     </div>
   </div>
 </div>
 
-<!-- ─── 2-Column Section: Financial Summary & Quick Excel Import ─ -->
-<div class="d-grid gap-4 mb-4" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-
-  <!-- Fee Management Card -->
-  <div class="card">
-    <div class="card-header justify-between py-3">
-      <div class="card-title fs-sm fw-700">
-        <i class="fas fa-wallet text-success me-2"></i>{% trans "Fee Collections Overview" %}
-      </div>
-      <a href="{% url 'fee_list' %}" class="btn btn-ghost btn-sm">{% trans "Manage Fees" %} &rarr;</a>
+<!-- FEE + BULK UPLOAD -->
+<div class="d-grid gap-4 mb-4" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+  <div class="section-card" style="margin-bottom:0;">
+    <div class="section-card-header">
+      <div class="section-card-title"><i class="fas fa-wallet text-success me-2"></i>Fee Collections Overview</div>
+      <a href="{% url 'fee_list' %}" style="font-size:0.82rem;font-weight:600;color:#059669;text-decoration:none;">Manage Fees →</a>
     </div>
-    <div class="card-body">
-      <div class="d-flex justify-between items-center p-3 mb-3 rounded-3" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
+    <div class="section-card-body">
+      <div class="fee-block collected">
         <div>
-          <div class="fs-xs fw-700 text-muted uppercase">{% trans "Total Collected" %}</div>
-          <div class="fs-xl fw-800 text-success">₹ {{ collected_fees }}</div>
+          <div style="font-size:0.7rem;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;">Total Collected</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#16a34a;">₹{{ collected_fees }}</div>
         </div>
-        <div style="width: 40px; height: 40px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center;">
-          <i class="fas fa-check-circle fs-lg"></i>
-        </div>
+        <div class="fee-block-icon collected"><i class="fas fa-check-circle"></i></div>
       </div>
-
-      <div class="d-flex justify-between items-center p-3 rounded-3" style="background: #fef2f2; border: 1px solid #fecaca;">
+      <div class="fee-block pending" style="margin-bottom:0;">
         <div>
-          <div class="fs-xs fw-700 text-muted uppercase">{% trans "Pending Dues" %}</div>
-          <div class="fs-xl fw-800 text-danger">₹ {{ pending_fees }}</div>
+          <div style="font-size:0.7rem;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.5px;">Pending Dues</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#dc2626;">₹{{ pending_fees }}</div>
         </div>
-        <div style="width: 40px; height: 40px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center;">
-          <i class="fas fa-clock fs-lg"></i>
-        </div>
+        <div class="fee-block-icon pending"><i class="fas fa-clock"></i></div>
       </div>
     </div>
   </div>
 
-  <!-- Excel Import Shortcut Card -->
-  <div class="card" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #e9d5ff;">
-    <div class="card-body p-4 d-flex flex-column justify-between">
+  <div class="section-card" style="margin-bottom:0;background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-color:#e9d5ff;">
+    <div class="section-card-body d-flex flex-column" style="height:100%;justify-content:space-between;">
       <div>
-        <div class="d-flex align-items-center gap-2 mb-2">
-          <span class="badge" style="background: #9333ea; color: white;">Excel & CSV</span>
-          <span class="fs-xs text-purple fw-700 uppercase">{% trans "Fast Onboarding" %}</span>
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span style="background:#7c3aed;color:#fff;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">Excel &amp; CSV</span>
+          <span style="font-size:0.72rem;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Fast Onboarding</span>
         </div>
-        <h3 class="fs-md fw-800 text-dark mb-2">
-          <i class="fas fa-file-excel text-success me-1"></i> {% trans "Bulk Student Upload" %}
+        <h3 style="font-size:1.05rem;font-weight:800;color:#1e293b;margin-bottom:8px;">
+          <i class="fas fa-file-excel text-success me-1"></i> Bulk Student Upload
         </h3>
-        <p class="fs-xs text-muted mb-3" style="line-height: 1.6;">
+        <p style="font-size:0.84rem;color:#64748b;line-height:1.65;margin-bottom:20px;">
           તમારી સ્કૂલ રજીસ્ટર Excel ફાઇલ (<code>STD6.xlsx</code>) સીધી અપલોડ કરી સેકન્ડોમાં બધા વિદ્યાર્થીઓ ઉમેરી લો!
         </p>
       </div>
-
-      <div>
-        <a href="{% url 'student_csv_import' %}" class="btn btn-primary w-100 fw-700 py-2" style="background: #9333ea; border-color: #9333ea; box-shadow: 0 4px 14px rgba(147, 51, 234, 0.3);">
-          <i class="fas fa-upload me-2"></i> {% trans "Open Excel / CSV Importer" %} &rarr;
-        </a>
-      </div>
+      <a href="{% url 'student_csv_import' %}"
+         style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#7c3aed,#9333ea);color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;font-size:0.875rem;text-decoration:none;box-shadow:0 4px 14px rgba(124,58,237,0.35);">
+        <i class="fas fa-upload"></i> Open Excel / CSV Importer →
+      </a>
     </div>
   </div>
-
 </div>
 
-<!-- ─── Recent Quiz Results Across Institution ───────────────── -->
-<div class="card">
-  <div class="card-header justify-between py-3">
-    <div class="card-title fs-sm fw-700">
-      <i class="fas fa-history text-primary me-2"></i>{% trans "Recent Quiz Results (તાજેતરના ક્વિઝ પરિણામો)" %}
+<!-- RECENT QUIZ RESULTS -->
+<div class="section-card" style="margin-bottom:0;">
+  <div class="section-card-header">
+    <div class="section-card-title">
+      <i class="fas fa-history text-primary me-2"></i>Recent Quiz Results (તાજેતરના ક્વિઝ પરિણામો)
     </div>
-    <a href="{% url 'quiz_list' %}" class="btn btn-ghost btn-sm">{% trans "View Quizzes" %} &rarr;</a>
+    <a href="{% url 'quiz_list' %}" style="font-size:0.82rem;font-weight:600;color:#2563eb;text-decoration:none;">View Quizzes →</a>
   </div>
-  <div class="card-body p-0">
+  <div>
     {% if recent_results %}
-      <div class="table-wrapper">
-        <table>
+      <div style="overflow-x:auto;">
+        <table class="results-table">
           <thead>
             <tr>
-              <th>{% trans "Student" %}</th>
-              <th>{% trans "Quiz Title" %}</th>
-              <th>{% trans "Score" %}</th>
-              <th>{% trans "Percentage" %}</th>
-              <th>{% trans "Status" %}</th>
-              <th>{% trans "Date & Time" %}</th>
-              <th class="text-right">{% trans "Review" %}</th>
+              <th>Student</th>
+              <th>Quiz Title</th>
+              <th>Score</th>
+              <th>Percentage</th>
+              <th>Status</th>
+              <th>Date &amp; Time</th>
+              <th style="text-align:right;">Review</th>
             </tr>
           </thead>
           <tbody>
             {% for result in recent_results %}
             <tr>
               <td>
-                <div class="fw-700 text-dark">{{ result.student.name }}</div>
-                <div class="text-muted fs-xs font-mono">{{ result.student.student_id }} • {{ result.student.get_class_field_display }}</div>
+                <div style="font-weight:700;color:#1e293b;">{{ result.student.name }}</div>
+                <div style="font-size:0.72rem;color:#94a3b8;font-family:monospace;">{{ result.student.student_id }} · {{ result.student.get_class_field_display }}</div>
               </td>
-              <td class="fw-600">{{ result.quiz.title }}</td>
-              <td class="fw-700">{{ result.total_marks }} / {{ result.quiz.get_total_marks }}</td>
+              <td style="font-weight:600;color:#334155;">{{ result.quiz.title }}</td>
+              <td style="font-weight:800;color:#1e293b;">{{ result.total_marks }} / {{ result.quiz.get_total_marks }}</td>
               <td>
-                <span class="badge {% if result.passed %}badge-success{% else %}badge-danger{% endif %} font-mono">
+                <span style="background:{% if result.passed %}#dbeafe{% else %}#fef2f2{% endif %};color:{% if result.passed %}#1e40af{% else %}#dc2626{% endif %};padding:3px 10px;border-radius:20px;font-weight:700;font-size:0.75rem;font-family:monospace;">
                   {{ result.percentage }}%
                 </span>
               </td>
               <td>
                 {% if result.passed %}
-                  <span class="badge badge-success"><i class="fas fa-check me-1"></i>{% trans "Passed" %}</span>
+                  <span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-weight:700;font-size:0.75rem;"><i class="fas fa-check me-1"></i>Passed</span>
                 {% else %}
-                  <span class="badge badge-danger"><i class="fas fa-times me-1"></i>{% trans "Failed" %}</span>
+                  <span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-weight:700;font-size:0.75rem;"><i class="fas fa-times me-1"></i>Failed</span>
                 {% endif %}
               </td>
-              <td class="text-muted fs-xs">{{ result.taken_date|date:"d M Y, h:i A" }}</td>
-              <td class="text-right">
-                <a href="{% url 'quiz_result' result.id %}" class="btn btn-outline btn-sm">
-                  <i class="fas fa-eye"></i>
+              <td style="font-size:0.78rem;color:#94a3b8;">{{ result.taken_date|date:"d M Y, h:i A" }}</td>
+              <td style="text-align:right;">
+                <a href="{% url 'quiz_result' result.id %}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;background:#eff6ff;color:#2563eb;font-size:0.8rem;font-weight:600;text-decoration:none;">
+                  <i class="fas fa-eye"></i> View
                 </a>
               </td>
             </tr>
@@ -264,10 +389,11 @@
     {% else %}
       <div class="empty-state py-5">
         <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
-        <div class="empty-title">{% trans "No quiz attempts recorded yet." %}</div>
-        <div class="empty-desc">{% trans "When students take quizzes, their results will appear here in real-time." %}</div>
+        <div class="empty-title">No quiz attempts recorded yet.</div>
+        <div class="empty-desc">When students take quizzes, their results will appear here in real-time.</div>
       </div>
     {% endif %}
   </div>
 </div>
+
 {% endblock %}

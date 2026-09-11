@@ -1,253 +1,389 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% trans "Students Register" %} — {% trans "Student Management System" %}{% endblock %}
+{% block title %}{% trans "Students Register" %} — Rajvi School Management{% endblock %}
 {% block page_title %}{% trans "School Students Register" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Students List Premium Styles ── */
+@keyframes heroShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.hero-students {
+  background: linear-gradient(135deg, #0c1445 0%, #1e3a8a 45%, #2563eb 75%, #4f86f7 100%);
+  background-size: 300% 300%;
+  animation: heroShift 9s ease infinite;
+  color: #fff;
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 22px;
+  box-shadow: 0 16px 36px -6px rgba(37,99,235,0.4);
+  position: relative;
+  overflow: hidden;
+}
+.hero-students::before {
+  content:''; position:absolute;
+  width:220px; height:220px; border-radius:50%;
+  background:rgba(255,255,255,0.05);
+  top:-60px; right:-50px;
+}
+.hero-students::after {
+  content:''; position:absolute;
+  width:160px; height:160px; border-radius:50%;
+  background:rgba(255,255,255,0.04);
+  bottom:-55px; left:30px;
+}
+
+/* Class Tab Bar */
+.class-tab-bar {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  background: #f1f5f9; border: 1px solid #e2e8f0;
+  border-radius: 14px; padding: 8px 10px;
+  margin-bottom: 18px;
+}
+.class-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 10px;
+  font-size: 0.82rem; font-weight: 700;
+  text-decoration: none; transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+.class-tab.inactive {
+  background: #fff; color: #475569; border-color: #e2e8f0;
+}
+.class-tab.inactive:hover { background: #f8fafc; border-color: #cbd5e1; text-decoration:none; }
+.class-tab .tab-count {
+  padding: 1px 8px; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 800;
+}
+
+/* Search / Filter Bar */
+.search-filter-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+/* Class Selector Cards */
+.class-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.class-selector-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+  padding: 20px 22px;
+  display: flex; align-items: center; gap: 16px;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative; overflow: hidden;
+}
+.class-selector-card::after {
+  content:''; position:absolute;
+  left:0; top:0; height:100%; width:5px;
+  border-radius: 16px 0 0 16px;
+}
+.class-selector-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+  border-color: #93c5fd;
+  text-decoration: none;
+}
+.class-sel-icon {
+  width: 54px; height: 54px; border-radius: 14px;
+  display:flex; align-items:center; justify-content:center;
+  font-size: 1.5rem; flex-shrink: 0;
+}
+.class-sel-num {
+  font-size: 1.6rem; font-weight: 900; line-height: 1;
+}
+
+/* Student Table */
+.register-table-wrap {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+.register-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.register-table thead tr {
+  background: linear-gradient(90deg, #0f2057, #1e3a8a, #2563eb);
+  color: #fff;
+}
+.register-table thead th {
+  padding: 12px 12px; font-weight: 700;
+  letter-spacing: .4px; white-space: nowrap;
+}
+.register-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.12s; }
+.register-table tbody tr:nth-child(even) { background: #fafbfd; }
+.register-table tbody tr:hover { background: #eff6ff !important; }
+.register-table tbody td { padding: 10px 12px; }
+
+/* Action Buttons in table */
+.tbl-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width: 30px; height: 30px; border-radius: 8px;
+  text-decoration: none; font-size: 0.8rem;
+  transition: all 0.15s;
+}
+.tbl-btn.view   { background:#eff6ff; color:#2563eb; }
+.tbl-btn.edit   { background:#f5f3ff; color:#6366f1; }
+.tbl-btn.key    { background:#fffbeb; color:#d97706; }
+.tbl-btn.del    { background:#fef2f2; color:#ef4444; }
+.tbl-btn:hover  { transform: scale(1.12); text-decoration:none; }
+
+/* Bulk Delete Toolbar */
+.bulk-toolbar {
+  background: linear-gradient(135deg, #fff1f2, #fee2e2);
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 14px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
 
-<!-- ── Hero Header ───────────────────────────────────────────── -->
-<div class="mb-5 rounded-3 p-4" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%); color: #fff; box-shadow: 0 4px 24px rgba(37,99,235,0.18);">
-  <div class="d-flex justify-between items-center flex-wrap gap-3">
+<!-- ── HERO ──────────────────────────────────────────────────────── -->
+<div class="hero-students">
+  <div class="d-flex justify-between items-center flex-wrap gap-3" style="position:relative;z-index:1;">
     <div>
-      <div class="d-flex align-items-center gap-2 mb-1">
-        <div style="width:40px;height:40px;background:rgba(255,255,255,0.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div style="width:46px;height:46px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">
           <i class="fas fa-address-book"></i>
         </div>
-        <h1 class="fs-xl fw-800 mb-0" style="color:#fff;">Students Register <span style="opacity:.75;font-weight:400;font-size:0.9em;">(વિદ્યાર્થી રજીસ્ટર)</span></h1>
+        <div>
+          <h1 style="font-size:1.5rem;font-weight:900;color:#fff;margin:0;letter-spacing:-.2px;">
+            Students Register
+            <span style="font-size:0.9rem;font-weight:400;opacity:.75;">(વિદ્યાર્થી રજીસ્ટર)</span>
+          </h1>
+          <div style="color:rgba(255,255,255,0.72);font-size:0.8rem;margin-top:2px;">Class-wise GR records, register &amp; login management</div>
+        </div>
       </div>
-      <div style="opacity:.8;font-size:0.85rem;">Class-wise GR records, register &amp; login management</div>
-      <!-- Quick stats -->
-      <div class="d-flex flex-wrap gap-3 mt-3">
+      <!-- Class count pills -->
+      <div class="d-flex flex-wrap gap-2 mt-1">
         {% for c, count in class_counts.items %}{% if c != 'total' %}
-        <div style="background:rgba(255,255,255,0.12);border-radius:8px;padding:6px 14px;font-size:0.82rem;">
-          <span style="opacity:.75;">Std {{ c }}</span>
-          <strong style="margin-left:6px;">{{ count }}</strong>
-        </div>
+        <span style="background:rgba(255,255,255,0.13);color:#fff;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:600;">
+          Std {{ c }}: <strong>{{ count }}</strong>
+        </span>
         {% endif %}{% endfor %}
-        <div style="background:rgba(255,255,255,0.2);border-radius:8px;padding:6px 14px;font-size:0.82rem;border:1px solid rgba(255,255,255,0.3);">
-          <i class="fas fa-users me-1"></i> Total <strong>{{ class_counts.total }}</strong>
-        </div>
+        <span style="background:rgba(255,255,255,0.22);color:#fff;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;border:1px solid rgba(255,255,255,0.35);">
+          <i class="fas fa-users me-1"></i>Total: <strong>{{ class_counts.total }}</strong>
+        </span>
       </div>
     </div>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'student_create' %}" class="btn btn-sm fw-600" style="background:#fff;color:#1e3a5f;border:none;">
-        <i class="fas fa-user-plus me-1"></i> Add Student
+      <a href="{% url 'student_create' %}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;background:#fff;color:#1e3a8a;font-weight:700;font-size:0.82rem;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        <i class="fas fa-user-plus"></i> Add Student
       </a>
-      <a href="{% url 'student_csv_import' %}" class="btn btn-sm fw-600" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.35);">
-        <i class="fas fa-file-excel me-1"></i> Import Excel
+      <a href="{% url 'student_csv_import' %}" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-weight:700;font-size:0.82rem;text-decoration:none;">
+        <i class="fas fa-file-excel"></i> Import Excel
       </a>
-      <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}" class="btn btn-sm fw-600" style="background:#10b981;color:#fff;border:none;">
-        <i class="fas fa-file-download me-1"></i> Export Excel
+      <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}"
+         style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;background:#10b981;color:#fff;font-weight:700;font-size:0.82rem;text-decoration:none;box-shadow:0 4px 12px rgba(16,185,129,0.35);">
+        <i class="fas fa-file-download"></i> Export Excel
       </a>
     </div>
   </div>
 </div>
 
-<!-- ── Class Tabs ─────────────────────────────────────────────── -->
-<div class="d-flex flex-wrap gap-2 mb-4 p-2 rounded-3" style="background:#f1f5f9;border:1px solid #e2e8f0;">
+<!-- ── CLASS TABS ─────────────────────────────────────────────────── -->
+<div class="class-tab-bar">
   {% for val, label, color in class_tab_data %}
   <a href="{% url 'student_list' %}?class={{ val }}"
-     class="d-flex align-items-center gap-2 px-3 py-2 rounded-2 text-decoration-none fw-600 fs-xs"
-     style="{% if class_filter == val %}background:{{ color }};color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.12);{% else %}background:#fff;color:#475569;border:1px solid #e2e8f0;{% endif %}transition:all 0.15s;">
-    <i class="fas fa-layer-group" style="font-size:0.8rem;"></i>
+     class="class-tab {% if class_filter != val %}inactive{% endif %}"
+     style="{% if class_filter == val %}background:{{ color }};color:#fff;border-color:{{ color }};box-shadow:0 3px 10px rgba(0,0,0,0.15);{% endif %}">
+    <i class="fas fa-layer-group" style="font-size:0.78rem;"></i>
     {{ label }}
-    <span class="fw-700" style="{% if class_filter == val %}background:rgba(255,255,255,0.25);{% else %}background:#f1f5f9;{% endif %}padding:1px 7px;border-radius:20px;font-size:0.78rem;">
+    <span class="tab-count" style="{% if class_filter == val %}background:rgba(255,255,255,0.25);color:#fff;{% else %}background:#f1f5f9;color:#475569;{% endif %}">
       {% if val == '5' %}{{ class_counts.5 }}{% elif val == '6' %}{{ class_counts.6 }}{% elif val == '7' %}{{ class_counts.7 }}{% elif val == '8' %}{{ class_counts.8 }}{% elif val == 'all' %}{{ class_counts.total }}{% endif %}
     </span>
   </a>
   {% endfor %}
 </div>
 
-<!-- ── Search & Filter Bar ───────────────────────────────────── -->
-<div class="card mb-4 border-0 shadow-sm">
-  <div class="card-body p-3">
-    <form method="GET" class="d-flex flex-wrap gap-2 items-center">
-      <div style="flex:2;min-width:220px;position:relative;">
-        <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:0.85rem;"></i>
-        <input type="text" name="search" class="form-control" style="padding-left:34px;" placeholder="Search by name or GR.NO…" value="{{ search_query }}">
-      </div>
-      <input type="hidden" name="class" value="{{ class_filter }}">
-      <div style="flex:1;min-width:140px;">
-        <select name="status" class="form-select">
-          <option value="">All Status</option>
-          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
-          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
-        </select>
-      </div>
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary btn-sm">
-          <i class="fas fa-search me-1"></i>Search
-        </button>
-        {% if search_query or class_filter or status_filter %}
-          <a href="{% url 'student_list' %}" class="btn btn-outline btn-sm">
-            <i class="fas fa-times me-1"></i>Clear
-          </a>
-        {% endif %}
-        {% if show_students %}
-        <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}"
-           class="btn btn-sm fw-600" style="background:#10b981;color:#fff;border:none;white-space:nowrap;"
-           title="Export current view to Excel">
-          <i class="fas fa-file-excel me-1"></i> Export <span class="d-none d-md-inline">Excel</span>
+<!-- ── SEARCH & FILTER BAR ───────────────────────────────────────── -->
+<div class="search-filter-card">
+  <form method="GET" class="d-flex flex-wrap gap-2 items-center">
+    <div style="flex:2;min-width:220px;position:relative;">
+      <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:0.85rem;"></i>
+      <input type="text" name="search" class="form-control" style="padding-left:36px;border-radius:10px;"
+             placeholder="Search by name or GR.NO…" value="{{ search_query }}">
+    </div>
+    <input type="hidden" name="class" value="{{ class_filter }}">
+    <div style="flex:1;min-width:140px;">
+      <select name="status" class="form-select" style="border-radius:10px;">
+        <option value="">All Status</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
+      </select>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm" style="border-radius:10px;">
+        <i class="fas fa-search me-1"></i>Search
+      </button>
+      {% if search_query or class_filter or status_filter %}
+        <a href="{% url 'student_list' %}" class="btn btn-outline btn-sm" style="border-radius:10px;">
+          <i class="fas fa-times me-1"></i>Clear
         </a>
-        {% endif %}
-      </div>
-    </form>
-  </div>
+      {% endif %}
+      {% if show_students %}
+      <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}"
+         class="btn btn-sm fw-600" style="background:#10b981;color:#fff;border:none;border-radius:10px;white-space:nowrap;">
+        <i class="fas fa-file-excel me-1"></i>Export<span class="d-none d-md-inline"> Excel</span>
+      </a>
+      {% endif %}
+    </div>
+  </form>
 </div>
 
-<!-- ── No Class Selected — Show Class Selector Cards ─────────── -->
+<!-- ── NO CLASS SELECTED — CARDS ─────────────────────────────────── -->
 {% if not show_students %}
-<div style="text-align:center;padding:40px 0 20px;">
-  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#2563eb;margin:0 auto 20px;">
+<div style="text-align:center;padding:36px 0 20px;">
+  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#2563eb;margin:0 auto 18px;">
     <i class="fas fa-book-reader"></i>
   </div>
-  <h2 class="fs-lg fw-800 text-dark mb-2">ધોરણ (Class) પસંદ કરો</h2>
-  <p class="fs-xs text-muted mb-5" style="max-width:480px;margin:0 auto 32px;">
+  <h2 style="font-size:1.2rem;font-weight:800;color:#1e293b;margin-bottom:6px;">ધોરણ (Class) પસંદ કરો</h2>
+  <p style="font-size:0.85rem;color:#64748b;margin:0 auto 32px;max-width:460px;">
     દરેક ધોરણ અલગ-અલગ રજીસ્ટર ધરાવે છે. SR.NO ૧ થી શરૂ થાય છે. ઉપર ટેબ પર ક્લિક કરો અથવા નીચે ધોરણ પસંદ કરો.
   </p>
 </div>
 
-<div class="d-grid gap-4 mb-4" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));">
+<div class="class-selector-grid">
   {% for val, label, color, icon in class_card_data %}
-  <a href="{% url 'student_list' %}?class={{ val }}" class="text-decoration-none" style="outline:none;">
-    <div class="rounded-3 p-4 d-flex align-items-center gap-3 bg-white border shadow-sm"
-         style="border-left:5px solid {{ color }} !important;transition:transform 0.15s,box-shadow 0.15s;"
-         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)';"
-         onmouseout="this.style.transform='';this.style.boxShadow='';">
-      <div style="width:48px;height:48px;border-radius:12px;background:{{ color }}20;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:{{ color }};flex-shrink:0;">
-        <i class="{{ icon }}"></i>
-      </div>
-      <div style="flex:1;">
-        <div class="fw-800 text-dark">{{ label }}</div>
-        <div class="fs-xs text-muted mt-1">
-          {% if val == '5' %}{{ class_counts.5 }}{% elif val == '6' %}{{ class_counts.6 }}{% elif val == '7' %}{{ class_counts.7 }}{% elif val == '8' %}{{ class_counts.8 }}{% endif %} students
-        </div>
-      </div>
-      <div style="color:{{ color }};font-size:1.1rem;"><i class="fas fa-chevron-right"></i></div>
+  <a href="{% url 'student_list' %}?class={{ val }}" class="class-selector-card" style="border-left:5px solid {{ color }} !important;">
+    <div class="class-sel-icon" style="background:{{ color }}20;color:{{ color }};">
+      <i class="{{ icon }}"></i>
     </div>
+    <div style="flex:1;">
+      <div style="font-weight:800;color:#1e293b;font-size:0.95rem;">{{ label }}</div>
+      <div class="class-sel-num" style="color:{{ color }};">
+        {% if val == '5' %}{{ class_counts.5 }}{% elif val == '6' %}{{ class_counts.6 }}{% elif val == '7' %}{{ class_counts.7 }}{% elif val == '8' %}{{ class_counts.8 }}{% endif %}
+      </div>
+      <div style="font-size:0.75rem;color:#94a3b8;font-weight:600;">students enrolled</div>
+    </div>
+    <div style="color:{{ color }};font-size:1rem;"><i class="fas fa-chevron-right"></i></div>
   </a>
   {% endfor %}
 </div>
 
-<!-- ── Students Found — Show Register Table ───────────────────── -->
+<!-- ── STUDENTS TABLE ─────────────────────────────────────────────── -->
 {% else %}
   {% if students %}
   <form method="POST" action="{% url 'student_bulk_delete' %}" id="bulkDeleteForm">
     {% csrf_token %}
 
-    <!-- Active register sub-header -->
+    <!-- Sub-header row -->
     <div class="d-flex justify-between items-center mb-3 flex-wrap gap-2">
       <div class="d-flex align-items-center gap-2">
-        <div class="fw-700 fs-base text-dark">
-          <i class="fas fa-clipboard-list text-primary me-1"></i>
+        <div style="width:10px;height:10px;border-radius:50%;background:#3b82f6;"></div>
+        <span style="font-weight:700;font-size:0.95rem;color:#1e293b;">
           {% if current_class_name %}{{ current_class_name }}{% else %}Search Results{% endif %} Register
-        </div>
-        <span class="badge badge-muted fs-xs">{{ students.paginator.count }} students</span>
+        </span>
+        <span style="background:#eff6ff;color:#1d4ed8;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">
+          {{ students.paginator.count }} students
+        </span>
       </div>
       <a href="{% url 'student_export_excel' %}?class={{ class_filter }}&search={{ search_query }}&status={{ status_filter }}"
-         class="btn btn-sm fw-600" style="background:#10b981;color:#fff;border:none;">
-        <i class="fas fa-file-excel me-1"></i> Download Excel Register
+         style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:#10b981;color:#fff;font-size:0.82rem;font-weight:700;text-decoration:none;">
+        <i class="fas fa-file-excel"></i> Download Excel Register
       </a>
     </div>
 
     <!-- Bulk Delete Toolbar -->
-    <div id="bulkActionToolbar" style="display:none;background:#fff1f2;border:1px solid #fecdd3;border-radius:12px;padding:12px 16px;margin-bottom:12px;">
+    <div id="bulkActionToolbar" class="bulk-toolbar" style="display:none;">
       <div class="d-flex justify-between items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
-          <span class="badge badge-danger" id="selectedBadge">0 Selected</span>
-          <span class="fs-xs text-muted">વિદ્યાર્થીઓ પસંદ છે</span>
+          <span style="background:#ef4444;color:#fff;padding:3px 10px;border-radius:20px;font-size:0.78rem;font-weight:700;" id="selectedBadge">0 Selected</span>
+          <span style="font-size:0.82rem;color:#64748b;">વિદ્યાર્થીઓ પસંદ છે</span>
         </div>
         <div class="d-flex gap-2">
-          <button type="button" class="btn btn-ghost btn-sm text-muted" onclick="deselectAll()">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="deselectAll()">
             <i class="fas fa-times me-1"></i>Cancel
           </button>
-          <button type="button" class="btn btn-sm fw-700" style="background:#ef4444;color:#fff;" onclick="confirmBulkDelete()">
+          <button type="button" class="btn btn-sm fw-700" style="background:#ef4444;color:#fff;border-radius:9px;" onclick="confirmBulkDelete()">
             <i class="fas fa-trash-alt me-1"></i>Delete Selected
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ── Register Table ── -->
-    <div class="card border-0 shadow-sm overflow-hidden">
+    <!-- Register Table -->
+    <div class="register-table-wrap">
       <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+        <table class="register-table">
           <thead>
-            <tr style="background:linear-gradient(90deg,#1e3a5f,#2563eb);color:#fff;">
-              <th style="padding:12px 10px;text-align:center;width:42px;">
-                <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" style="cursor:pointer;width:16px;height:16px;accent-color:#fff;">
+            <tr>
+              <th style="width:42px;text-align:center;">
+                <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"
+                       style="cursor:pointer;width:16px;height:16px;accent-color:#fff;">
               </th>
-              <th style="padding:12px 8px;text-align:center;width:58px;font-weight:700;letter-spacing:.5px;">SR .NO</th>
-              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;color:#93c5fd;">GR.NO</th>
-              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;">STUDENT NAME</th>
-              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;">DOB</th>
-              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;">ADDRESS</th>
-              <th style="padding:12px 12px;font-weight:700;letter-spacing:.5px;color:#6ee7b7;">MOBAIL NO</th>
-              {% if class_filter == 'all' or not class_filter %}<th style="padding:12px 10px;font-weight:700;">CLASS</th>{% endif %}
-              <th style="padding:12px 12px;font-weight:700;text-align:right;">ACTIONS</th>
+              <th style="text-align:center;width:56px;">SR .NO</th>
+              <th style="color:#93c5fd;">GR.NO</th>
+              <th>STUDENT NAME</th>
+              <th>DOB</th>
+              <th>ADDRESS</th>
+              <th style="color:#6ee7b7;">MOBAIL NO</th>
+              {% if class_filter == 'all' or not class_filter %}<th>CLASS</th>{% endif %}
+              <th style="text-align:right;">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             {% for student in students %}
-            <tr style="border-bottom:1px solid #f1f5f9;{% if forloop.counter|divisibleby:2 %}background:#f8fafc;{% else %}background:#fff;{% endif %}transition:background 0.1s;"
-                onmouseover="this.style.background='#eff6ff';" onmouseout="this.style.background='{% if forloop.counter|divisibleby:2 %}#f8fafc{% else %}#fff{% endif %}';">
-
-              <td style="padding:10px;text-align:center;">
+            <tr>
+              <td style="text-align:center;">
                 <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox"
                        onchange="updateSelectionUI()" style="cursor:pointer;width:16px;height:16px;accent-color:#2563eb;">
               </td>
-
-              <td style="padding:10px 8px;text-align:center;">
+              <td style="text-align:center;">
                 <span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:20px;font-weight:700;font-size:0.8rem;font-family:monospace;">
                   {{ forloop.counter0|add:students.start_index }}
                 </span>
               </td>
-
-              <td style="padding:10px 12px;">
+              <td>
                 <span style="background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:6px;font-weight:800;font-family:monospace;font-size:0.9rem;letter-spacing:.5px;">
                   {{ student.student_id }}
                 </span>
               </td>
-
-              <td style="padding:10px 12px;">
-                <div class="fw-700" style="color:#1e293b;">{{ student.name }}</div>
-                <div style="font-size:0.75rem;color:#94a3b8;margin-top:2px;">
-                  {% if student.user %}<i class="fas fa-circle" style="color:#10b981;font-size:0.55rem;margin-right:3px;"></i>Login Active{% else %}<i class="fas fa-circle" style="color:#f59e0b;font-size:0.55rem;margin-right:3px;"></i>No Login{% endif %}
+              <td>
+                <div style="font-weight:700;color:#1e293b;">{{ student.name }}</div>
+                <div style="font-size:0.72rem;margin-top:2px;">
+                  {% if student.user %}
+                    <span style="color:#10b981;"><i class="fas fa-circle" style="font-size:0.5rem;vertical-align:middle;"></i> Login Active</span>
+                  {% else %}
+                    <span style="color:#f59e0b;"><i class="fas fa-circle" style="font-size:0.5rem;vertical-align:middle;"></i> No Login</span>
+                  {% endif %}
                 </div>
               </td>
-
-              <td style="padding:10px 12px;font-family:monospace;color:#475569;font-size:0.85rem;">
+              <td style="font-family:monospace;color:#475569;font-size:0.85rem;">
                 {{ student.joining_date|date:"d/m/Y"|default:"—" }}
               </td>
-
-              <td style="padding:10px 12px;color:#475569;font-size:0.85rem;max-width:180px;">
-                {{ student.address|default:"—"|truncatechars:35 }}
+              <td style="color:#475569;font-size:0.85rem;max-width:160px;">
+                {{ student.address|default:"—"|truncatechars:32 }}
               </td>
-
-              <td style="padding:10px 12px;font-family:monospace;font-weight:700;color:#059669;font-size:0.875rem;">
+              <td style="font-family:monospace;font-weight:700;color:#059669;font-size:0.875rem;">
                 {{ student.phone|default:student.parent_mobile|default:"—" }}
               </td>
-
               {% if class_filter == 'all' or not class_filter %}
-              <td style="padding:10px;">
-                <span class="badge badge-primary" style="font-size:0.75rem;">{{ student.get_class_field_display }}</span>
+              <td>
+                <span class="badge badge-primary" style="font-size:0.72rem;">{{ student.get_class_field_display }}</span>
               </td>
               {% endif %}
-
-              <td style="padding:10px 12px;text-align:right;white-space:nowrap;">
-                <a href="{% url 'student_detail' student.pk %}" class="btn btn-ghost btn-xs" title="View Profile" style="color:#2563eb;">
-                  <i class="fas fa-eye"></i>
-                </a>
-                <a href="{% url 'student_edit' student.pk %}" class="btn btn-ghost btn-xs" title="Edit" style="color:#6366f1;">
-                  <i class="fas fa-edit"></i>
-                </a>
-                <a href="{% url 'student_reset_password' student.pk %}" class="btn btn-ghost btn-xs" title="Password (GR.NO)" style="color:#d97706;">
-                  <i class="fas fa-key"></i>
-                </a>
-                <a href="{% url 'student_delete' student.pk %}" class="btn btn-ghost btn-xs" title="Delete" style="color:#ef4444;">
-                  <i class="fas fa-trash"></i>
-                </a>
+              <td style="text-align:right;white-space:nowrap;">
+                <a href="{% url 'student_detail' student.pk %}" class="tbl-btn view" title="View Profile"><i class="fas fa-eye"></i></a>
+                <a href="{% url 'student_edit' student.pk %}" class="tbl-btn edit" title="Edit"><i class="fas fa-edit"></i></a>
+                <a href="{% url 'student_reset_password' student.pk %}" class="tbl-btn key" title="Reset Password"><i class="fas fa-key"></i></a>
+                <a href="{% url 'student_delete' student.pk %}" class="tbl-btn del" title="Delete"><i class="fas fa-trash"></i></a>
               </td>
             </tr>
             {% endfor %}
@@ -275,13 +411,13 @@
   {% endif %}
 
   {% else %}
-  <!-- Empty state -->
-  <div class="card p-5 text-center border-0 shadow-sm">
+  <!-- Empty State -->
+  <div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:48px 24px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.04);">
     <div style="width:64px;height:64px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#d97706;margin:0 auto 16px;">
       <i class="fas fa-folder-open"></i>
     </div>
-    <div class="fw-700 fs-md mb-1">આ ધોરણ/ફિલ્ટર માટે વિદ્યાર્થી મળ્યા નહીં.</div>
-    <div class="fs-xs text-muted mb-4">Excel import અથવા Add Student ઉપયોગ કરીને ઉમેરો.</div>
+    <div style="font-weight:700;font-size:1rem;color:#1e293b;margin-bottom:6px;">આ ધોરણ/ફિલ્ટર માટે વિદ્યાર્થી મળ્યા નહીં.</div>
+    <div style="font-size:0.84rem;color:#64748b;margin-bottom:20px;">Excel import અથવા Add Student ઉપયોગ કરીને ઉમેરો.</div>
     <div class="d-flex justify-center gap-2">
       <a href="{% url 'student_create' %}" class="btn btn-primary btn-sm">
         <i class="fas fa-user-plus me-1"></i>Add Student
@@ -294,7 +430,7 @@
   {% endif %}
 {% endif %}
 
-<!-- ── JavaScript ─────────────────────────────────────────────── -->
+<!-- JavaScript -->
 <script>
   function toggleSelectAll(master) {
     document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = master.checked);
