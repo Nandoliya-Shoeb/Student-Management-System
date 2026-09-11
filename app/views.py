@@ -62,30 +62,61 @@ def send_parent_sms(student, quiz, quiz_result):
         logger.info(f'SMS skipped: Invalid mobile number ({raw_mobile}) for student {student.student_id}.')
         return
 
-    # Build human-readable message in Gujarati
+    # Time-based greeting in Indian Timezone (Asia/Kolkata)
+    now_local = timezone.localtime(timezone.now())
+    hour = now_local.hour
+    if hour < 12:
+        greeting = "🌅 Good Morning"
+    elif 12 <= hour < 17:
+        greeting = "☀️ Good Afternoon"
+    else:
+        greeting = "🌆 Good Evening"
+
     total_possible = quiz.get_total_marks()
     percentage = float(quiz_result.percentage)
     is_fail = (percentage < 20) or (not quiz_result.passed)
-    status_word = 'નાપાસ (FAIL)' if is_fail else 'પાસ (PASS)'
 
-    dob_str = ''
-    if student.joining_date:
-        try:
-            dob_str = student.joining_date.strftime('%d/%m/%Y')
-        except Exception:
-            dob_str = str(student.joining_date)
+    # Subject & Quiz separation if delimiter exists in title
+    title = quiz.title.strip()
+    if ' – ' in title:
+        subject, quiz_name = [p.strip() for p in title.split(' – ', 1)]
+    elif ' - ' in title:
+        subject, quiz_name = [p.strip() for p in title.split(' - ', 1)]
+    elif ':' in title:
+        subject, quiz_name = [p.strip() for p in title.split(':', 1)]
+    else:
+        subject = ''
+        quiz_name = title
 
-    fail_note = "નોંધ: ૨૦% થી ઓછા ગુણ હોવાથી નાપાસ થયેલ છે.\n" if is_fail else ""
+    if subject:
+        quiz_info = f"📚 વિષય: {subject}\n📝 ક્વિઝ: {quiz_name}"
+    else:
+        quiz_info = f"📝 ક્વિઝ: {quiz_name}"
+
+    if is_fail:
+        status_line = "❌ પરિણામ: FAIL"
+        academic_note = (
+            "📝 શૈક્ષણિક નોંધ: પરિણામ સંતોષકારક નથી. વિષયની વધુ સારી સમજ માટે નિયમિત અભ્યાસ, "
+            "પુનરાવર્તન અને શિક્ષકના માર્ગદર્શન પર વિશેષ ધ્યાન આપવાની જરૂર છે."
+        )
+    else:
+        status_line = "✅ પરિણામ: PASS"
+        academic_note = (
+            "📝 શૈક્ષણિક નોંધ: ઉત્તમ પ્રદર્શન! વિદ્યાર્થી આ જ રીતે નિયમિત મહેનત ચાલુ રાખે તેવી શુભકામનાઓ."
+        )
 
     message = (
-        f"વાલીશ્રી, પરિણામ: {status_word}\n"
-        f"વિદ્યાર્થી: {student.name}\n"
-        f"GR.NO: {student.student_id} | ધોરણ: {student.class_field}\n"
-        f"DOB: {dob_str}\n"
-        f"ક્વિઝ: {quiz.title}\n"
-        f"મેળવેલ ગુણ: {quiz_result.correct_answers}/{quiz.total_questions} ({percentage:.1f}%)\n"
-        f"{fail_note}"
-        f"- Rajvi School Management"
+        f"{greeting}, વાલીશ્રી,\n\n"
+        f"આપને જાણ કરવામાં આવે છે કે આપના પુત્ર/પુત્રીએ {student.name} (GR. No. {student.student_id}), "
+        f"ધોરણ {student.class_field}, એ {quiz.title} ક્વિઝમાં નીચે મુજબ પરિણામ મેળવ્યું છે:\n\n"
+        f"{quiz_info}\n"
+        f"📊 મેળવેલ ગુણ: {quiz_result.correct_answers}/{quiz.total_questions} ({percentage:.1f}%)\n"
+        f"{status_line}\n\n"
+        f"{academic_note}\n\n"
+        f"વિદ્યાર્થીના શૈક્ષણિક વિકાસ માટે આપના સહકારની અપેક્ષા રાખીએ છીએ.\n\n"
+        f"આભાર.\n"
+        f"સાદર,\n"
+        f"Rajvi School Management"
     )
 
     try:
