@@ -42,6 +42,34 @@
           {% if form.student.errors %}<div class="form-error">{{ form.student.errors }}</div>{% endif %}
         </div>
 
+        <!-- Month & Year Selector (Auto-filled with Current Billing Month) -->
+        <div class="p-3 mb-4 rounded-3 border" style="background: #f0fdf4; border-color: #86efac !important;">
+          <div class="d-flex justify-between items-center mb-2 flex-wrap gap-1">
+            <label class="form-label fw-700 text-success mb-0">
+              <i class="fas fa-calendar-check me-1"></i>{% trans "Fee For Month & Year (ક્યા મહિનાની ફી ભરાય છે?)" %} <span class="req">*</span>
+            </label>
+            <span class="badge" style="background:#dcfce7; color:#15803d; font-size:0.75rem; font-weight:700; border: 1px solid #bbf7d0;">
+              <i class="fas fa-bolt me-1"></i>ચાલુ બિલિંગ મહિનો Autofill છે
+            </span>
+          </div>
+          <div class="form-row mb-0">
+            <div class="form-group mb-0">
+              <label class="form-label fs-xs fw-600 text-muted" for="id_fee_month">{% trans "Month (મહિનો)" %}</label>
+              {{ form.fee_month }}
+              {% if form.fee_month.errors %}<div class="form-error">{{ form.fee_month.errors }}</div>{% endif %}
+            </div>
+            <div class="form-group mb-0" style="max-width: 160px;">
+              <label class="form-label fs-xs fw-600 text-muted" for="id_fee_year">{% trans "Year (વર્ષ)" %}</label>
+              {{ form.fee_year }}
+              {% if form.fee_year.errors %}<div class="form-error">{{ form.fee_year.errors }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="fs-xs text-muted mt-2">
+            <i class="fas fa-info-circle text-success me-1"></i>
+            <strong>નિયમ:</strong> ૧૫ સપ્ટેમ્બર થી ૧૪ ઓક્ટોબર વચ્ચે ભરાતી ફી <strong>ઓક્ટોબર</strong> મહિનાની ગણાશે. ૧ ઓક્ટોબરથી નવો મહિનો શરૂ થતાં નવો રેકોર્ડ જમા થશે અને જૂનો રેકોર્ડ સચવાયેલો રહેશે.
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label fw-700" for="id_amount">{% trans "Amount (₹ રકમ)" %} <span class="req">*</span></label>

@@ -132,6 +132,30 @@ class FeeForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         label=_('Due Date'),
     )
+    fee_month = forms.ChoiceField(
+        choices=[
+            (1, 'January (જાન્યુઆરી)'),
+            (2, 'February (ફેબ્રુઆરી)'),
+            (3, 'March (માર્ચ)'),
+            (4, 'April (એપ્રિલ)'),
+            (5, 'May (મે)'),
+            (6, 'June (જૂન)'),
+            (7, 'July (જુલાઈ)'),
+            (8, 'August (ઓગસ્ટ)'),
+            (9, 'September (સપ્ટેમ્બર)'),
+            (10, 'October (ઓક્ટોબર)'),
+            (11, 'November (નવેમ્બર)'),
+            (12, 'December (ડિસેમ્બર)'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label=_('Fee Month (ક્યા મહિનાની ફી?)'),
+    )
+    fee_year = forms.IntegerField(
+        min_value=2020,
+        max_value=2040,
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+        label=_('Fee Year (વર્ષ)'),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -151,7 +175,7 @@ class FeeForm(forms.ModelForm):
     class Meta:
         model = Fee
         fields = [
-            'student', 'amount', 'fee_type', 'status',
+            'student', 'fee_month', 'fee_year', 'amount', 'fee_type', 'status',
             'due_date', 'payment_date', 'payment_method',
         ]
         widgets = {
@@ -162,6 +186,7 @@ class FeeForm(forms.ModelForm):
             'payment_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'payment_method': forms.Select(attrs={'class': 'form-select'}),
         }
+
 
 
 class QuizForm(forms.ModelForm):

@@ -278,6 +278,7 @@
             <th style="padding: 12px 10px; font-weight: 700;">{% trans "Class" %}</th>
             <th style="padding: 12px 12px; font-weight: 700;">{% trans "Amount" %}</th>
             <th style="padding: 12px 10px; font-weight: 700;">{% trans "Fee Type" %}</th>
+            <th style="padding: 12px 10px; font-weight: 700; color: #a7f3d0;">{% trans "Fee Month (મહિનો)" %}</th>
             <th style="padding: 12px 10px; font-weight: 700;">{% trans "Due Date" %}</th>
             <th style="padding: 12px 12px; font-weight: 700; text-align: center;">{% trans "Status" %}</th>
             <th style="padding: 12px 10px; font-weight: 700;">{% trans "Paid On" %}</th>
@@ -317,6 +318,12 @@
 
             <td style="padding: 10px;">
               <span class="badge badge-light border" style="font-size: 0.75rem;">{{ fee.get_fee_type_display }}</span>
+            </td>
+
+            <td style="padding: 10px; white-space: nowrap;">
+              <span class="badge" style="background:#ecfdf5; color:#065f46; font-weight:700; font-size:0.75rem; border:1px solid #a7f3d0;">
+                <i class="fas fa-calendar-alt me-1"></i>{{ fee.get_fee_month_display|default:fee.fee_month }} '{{ fee.fee_year|stringformat:"d"|slice:"-2:" }}
+              </span>
             </td>
 
             <td style="padding: 10px; font-family: monospace; color: #64748b; font-size: 0.82rem;">

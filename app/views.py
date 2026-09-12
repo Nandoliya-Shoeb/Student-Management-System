@@ -41,6 +41,30 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Fee Billing Month Helper
+# ---------------------------------------------------------------------------
+
+def get_fee_billing_month(ref_date=None):
+    """
+    Determine the fee billing month and year.
+    School rule:
+      - 15th of current month to 14th of next month is for the upcoming month's fee.
+      - e.g., Sept 15 to Oct 14 pays for October fee.
+      - Sept 1 to Sept 14 pays for September fee.
+    Returns: (billing_month, billing_year)
+    """
+    if ref_date is None:
+        ref_date = timezone.localdate()
+
+    if ref_date.day >= 15:
+        if ref_date.month == 12:
+            return 1, ref_date.year + 1
+        return ref_date.month + 1, ref_date.year
+    else:
+        return ref_date.month, ref_date.year
+
+
+# ---------------------------------------------------------------------------
 # SMS Helper — Parent Notification via Fast2SMS
 # ---------------------------------------------------------------------------
 
@@ -1354,25 +1378,23 @@ def fee_list(request):
     search_query  = request.GET.get('search', '').strip()
 
     # ── Month / Year filter ──────────────────────────────────────
-    now_local   = timezone.localtime(timezone.now())
-    current_month = now_local.month
-    current_year  = now_local.year
+    billing_month, billing_year = get_fee_billing_month()
 
     try:
-        month_filter = int(request.GET.get('month', current_month))
+        month_filter = int(request.GET.get('month', billing_month))
     except (ValueError, TypeError):
-        month_filter = current_month
+        month_filter = billing_month
     try:
-        year_filter = int(request.GET.get('year', current_year))
+        year_filter = int(request.GET.get('year', billing_year))
     except (ValueError, TypeError):
-        year_filter = current_year
+        year_filter = billing_year
 
     # Always apply month+year unless user passes month=0 (meaning "all time")
     use_month_filter = month_filter != 0
     if use_month_filter:
         fees = fees.filter(
-            created_at__month=month_filter,
-            created_at__year=year_filter,
+            fee_month=month_filter,
+            fee_year=year_filter,
         )
 
     if class_filter and class_filter != 'all':
@@ -1401,22 +1423,20 @@ def fee_list(request):
             'records': c_qs.count(),
         }
 
-    # ── Month-wise summary for last 12 months ────────────────────
+    # ── Month-wise summary for last 12 months based on billing month ────────────────────
     monthly_stats = []
     MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
                    'July', 'August', 'September', 'October', 'November', 'December']
     MONTH_NAMES_GU = ['', 'જાન્યુ', 'ફેબ્રુ', 'માર્ચ', 'એપ્રિ', 'મે', 'જૂન',
                       'જુલા', 'ઓગ', 'સપ્ટે', 'ઑક્ટો', 'નવે', 'ડિસે']
     for i in range(11, -1, -1):
-        # Go back i months from current
-        ref = now_local.replace(day=1) - timedelta(days=1) * 0  # start from now_local
-        import calendar
-        m = current_month - i
-        y = current_year
+        # Go back i months from billing_month/billing_year
+        m = billing_month - i
+        y = billing_year
         while m <= 0:
             m += 12
             y -= 1
-        m_qs  = Fee.objects.filter(created_at__month=m, created_at__year=y)
+        m_qs  = Fee.objects.filter(fee_month=m, fee_year=y)
         m_paid = m_qs.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
         m_pend = m_qs.filter(status='pending').aggregate(t=Sum('amount'))['t'] or 0
         monthly_stats.append({
@@ -1428,7 +1448,7 @@ def fee_list(request):
             'pending': m_pend,
             'total': m_paid + m_pend,
             'records': m_qs.count(),
-            'is_current': (m == current_month and y == current_year),
+            'is_current': (m == billing_month and y == billing_year),
             'is_selected': (m == month_filter and y == year_filter),
         })
 
@@ -1439,8 +1459,8 @@ def fee_list(request):
         scope_qs = Fee.objects.all()
     if use_month_filter:
         scope_qs = scope_qs.filter(
-            created_at__month=month_filter,
-            created_at__year=year_filter,
+            fee_month=month_filter,
+            fee_year=year_filter,
         )
 
     total_paid    = scope_qs.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
@@ -1471,8 +1491,10 @@ def fee_list(request):
         # Month filter context
         'month_filter': month_filter,
         'year_filter': year_filter,
-        'current_month': current_month,
-        'current_year': current_year,
+        'billing_month': billing_month,
+        'billing_year': billing_year,
+        'current_month': billing_month,
+        'current_year': billing_year,
         'monthly_stats': monthly_stats,
         'month_names': ['', 'January', 'February', 'March', 'April', 'May', 'June',
                         'July', 'August', 'September', 'October', 'November', 'December'],
@@ -1491,15 +1513,15 @@ def fee_monthly_report(request):
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
-    now_local = timezone.localtime(timezone.now())
+    billing_month, billing_year = get_fee_billing_month()
     try:
-        month_filter = int(request.GET.get('month', now_local.month))
+        month_filter = int(request.GET.get('month', billing_month))
     except (ValueError, TypeError):
-        month_filter = now_local.month
+        month_filter = billing_month
     try:
-        year_filter = int(request.GET.get('year', now_local.year))
+        year_filter = int(request.GET.get('year', billing_year))
     except (ValueError, TypeError):
-        year_filter = now_local.year
+        year_filter = billing_year
 
     class_filter = request.GET.get('class', '').strip()
 
@@ -1508,8 +1530,8 @@ def fee_monthly_report(request):
     month_name = MONTH_NAMES[month_filter] if 1 <= month_filter <= 12 else str(month_filter)
 
     qs = Fee.objects.select_related('student').filter(
-        created_at__month=month_filter,
-        created_at__year=year_filter,
+        fee_month=month_filter,
+        fee_year=year_filter,
     )
     if class_filter and class_filter != 'all':
         qs = qs.filter(student__class_field=class_filter)
@@ -1624,6 +1646,8 @@ def fee_create(request):
     if is_student_user(request.user):
         return redirect('student_dashboard')
 
+    billing_month, billing_year = get_fee_billing_month()
+
     if request.method == 'POST':
         form = FeeForm(request.POST)
         if form.is_valid():
@@ -1631,9 +1655,21 @@ def fee_create(request):
             messages.success(request, _('Fee added successfully.'))
             return redirect('fee_list')
     else:
-        form = FeeForm()
+        form = FeeForm(initial={
+            'fee_month': billing_month,
+            'fee_year': billing_year,
+            'fee_type': 'monthly',
+            'status': 'paid',
+            'payment_date': timezone.localdate(),
+            'payment_method': 'cash',
+        })
 
-    return render(request, 'fees/form.html', {'form': form, 'title': _('Add Fee')})
+    return render(request, 'fees/form.html', {
+        'form': form,
+        'title': _('Add Fee'),
+        'billing_month': billing_month,
+        'billing_year': billing_year,
+    })
 
 
 @login_required(login_url='login')

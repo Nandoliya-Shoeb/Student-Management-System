@@ -100,22 +100,40 @@ class Fee(models.Model):
         ('exam', _('Exam')),
         ('project', _('Project')),
     ]
-    
+
     STATUS_CHOICES = [
         ('paid', _('Paid')),
         ('pending', _('Pending')),
     ]
-    
+
     PAYMENT_METHOD_CHOICES = [
         ('cash', _('Cash')),
         ('online', _('Online')),
         ('check', _('Check')),
     ]
-    
+
+    MONTH_CHOICES = [
+        (1,  _('January (જાન્યુઆરી)')),
+        (2,  _('February (ફેબ્રુઆરી)')),
+        (3,  _('March (માર્ચ)')),
+        (4,  _('April (એપ્રિલ)')),
+        (5,  _('May (મે)')),
+        (6,  _('June (જૂન)')),
+        (7,  _('July (જુલાઈ)')),
+        (8,  _('August (ઓગસ્ટ)')),
+        (9,  _('September (સપ્ટેમ્બર)')),
+        (10, _('October (ઓક્ટોબર)')),
+        (11, _('November (નવેમ્બર)')),
+        (12, _('December (ડિસેમ્બર)')),
+    ]
+
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='fees', verbose_name=_('Student'))
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], verbose_name=_('Amount'))
     fee_type = models.CharField(max_length=20, choices=FEE_TYPE_CHOICES, verbose_name=_('Fee Type'))
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name=_('Status'))
+    # Which month's fee this record is for (school billing: 15th to 14th of next month)
+    fee_month = models.IntegerField(choices=MONTH_CHOICES, verbose_name=_('Fee Month (કઈ ફી)'), default=1)
+    fee_year = models.IntegerField(verbose_name=_('Fee Year (વર્ષ)'), default=2026)
     due_date = models.DateField(null=True, blank=True, verbose_name=_('Due Date'))
     payment_date = models.DateField(null=True, blank=True, verbose_name=_('Payment Date'))
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True, verbose_name=_('Payment Method'))
