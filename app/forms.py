@@ -127,11 +127,6 @@ class BulkAttendanceForm(forms.Form):
 
 
 class FeeForm(forms.ModelForm):
-    due_date = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-        label=_('Due Date'),
-    )
     fee_month = forms.ChoiceField(
         choices=[
             (1, 'January (જાન્યુઆરી)'),
@@ -176,7 +171,7 @@ class FeeForm(forms.ModelForm):
         model = Fee
         fields = [
             'student', 'fee_month', 'fee_year', 'amount', 'fee_type', 'status',
-            'due_date', 'payment_date', 'payment_method',
+            'payment_date', 'payment_method',
         ]
         widgets = {
             'student': forms.Select(attrs={'class': 'form-select'}),

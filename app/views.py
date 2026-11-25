@@ -47,21 +47,26 @@ logger = logging.getLogger(__name__)
 def get_fee_billing_month(ref_date=None):
     """
     Determine the fee billing month and year.
-    School rule:
-      - 15th of current month to 14th of next month is for the upcoming month's fee.
-      - e.g., Sept 15 to Oct 14 pays for October fee.
-      - Sept 1 to Sept 14 pays for September fee.
+    Simple school rule: 1st of month = new month starts.
+    Fee is collected for the CURRENT calendar month.
     Returns: (billing_month, billing_year)
     """
     if ref_date is None:
         ref_date = timezone.localdate()
+    return ref_date.month, ref_date.year
 
-    if ref_date.day >= 15:
-        if ref_date.month == 12:
-            return 1, ref_date.year + 1
-        return ref_date.month + 1, ref_date.year
-    else:
-        return ref_date.month, ref_date.year
+
+def get_fee_payment_date(billing_month, billing_year):
+    """
+    Get the default payment date = 1st of the billing month.
+    If 1st is Sunday (weekday 6), use 2nd. If 2nd is also Sunday, use 3rd, etc.
+    Returns: datetime.date
+    """
+    import datetime as _dt
+    candidate = _dt.date(billing_year, billing_month, 1)
+    while candidate.weekday() == 6:   # 6 = Sunday
+        candidate += _dt.timedelta(days=1)
+    return candidate
 
 
 # ---------------------------------------------------------------------------
@@ -387,8 +392,28 @@ def dashboard(request):
 
     total_students = Student.objects.count()
     active_students = Student.objects.filter(status='active').count()
-    pending_fees = Fee.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
-    collected_fees = Fee.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+
+    # ── All-time fee totals ───────────────────────────────────────────
+    all_collected = Fee.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    all_pending   = Fee.objects.filter(status='pending').aggregate(total=Sum('amount'))['total'] or 0
+
+    # ── Billing month stats (current month / year) ────────────────────
+    billing_month, billing_year = get_fee_billing_month()
+    month_collected = Fee.objects.filter(
+        status='paid', fee_month=billing_month, fee_year=billing_year
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    month_pending = Fee.objects.filter(
+        status='pending', fee_month=billing_month, fee_year=billing_year
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    month_records = Fee.objects.filter(fee_month=billing_month, fee_year=billing_year).count()
+
+    # ── Current year totals ───────────────────────────────────────────
+    year_collected = Fee.objects.filter(
+        status='paid', fee_year=billing_year
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    year_pending = Fee.objects.filter(
+        status='pending', fee_year=billing_year
+    ).aggregate(total=Sum('amount'))['total'] or 0
 
     today = timezone.localdate()
     today_attendance = Attendance.objects.filter(date=today).aggregate(
@@ -410,11 +435,34 @@ def dashboard(request):
         '8': Student.objects.filter(class_field='8', status='active').count(),
     }
 
+    # Month names
+    MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    MONTH_NAMES_GU = ['', 'જાન્યુઆરી', 'ફેબ્રુઆરી', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન',
+                      'જુલાઈ', 'ઓગસ્ટ', 'સપ્ટેમ્બર', 'ઓક્ટોબર', 'નવેમ્બર', 'ડિસેમ્બર']
+
     context = {
         'total_students': total_students,
         'active_students': active_students,
-        'pending_fees': pending_fees,
-        'collected_fees': collected_fees,
+        # All-time
+        'all_collected': all_collected,
+        'all_pending': all_pending,
+        # Backward compat
+        'collected_fees': all_collected,
+        'pending_fees': all_pending,
+        # Monthly
+        'month_collected': month_collected,
+        'month_pending': month_pending,
+        'month_records': month_records,
+        # Yearly
+        'year_collected': year_collected,
+        'year_pending': year_pending,
+        # Period labels
+        'billing_month': billing_month,
+        'billing_year': billing_year,
+        'billing_month_name': MONTH_NAMES[billing_month],
+        'billing_month_name_gu': MONTH_NAMES_GU[billing_month],
+        # Quiz
         'class_counts': class_counts,
         'total_quizzes': total_quizzes,
         'total_tests_taken': total_tests_taken,
@@ -1647,6 +1695,7 @@ def fee_create(request):
         return redirect('student_dashboard')
 
     billing_month, billing_year = get_fee_billing_month()
+    default_payment_date = get_fee_payment_date(billing_month, billing_year)
 
     if request.method == 'POST':
         form = FeeForm(request.POST)
@@ -1660,7 +1709,8 @@ def fee_create(request):
             'fee_year': billing_year,
             'fee_type': 'monthly',
             'status': 'paid',
-            'payment_date': timezone.localdate(),
+            'amount': 100,
+            'payment_date': default_payment_date,
             'payment_method': 'cash',
         })
 

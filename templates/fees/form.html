@@ -4,114 +4,229 @@
 {% block title %}{{ title }} — {% trans "Student Management System" %}{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.form-card-container {
+  max-width: 760px;
+  margin: 0 auto;
+  animation: fadeInUp 0.4s ease-out;
+}
+.fee-form-card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 35px -8px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+.fee-form-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
+  color: #ffffff;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.fee-form-header::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -40px;
+  width: 140px;
+  height: 140px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+.fee-form-body {
+  padding: 28px 32px;
+}
+@media (max-width: 640px) {
+  .fee-form-header { padding: 18px 20px; }
+  .fee-form-body   { padding: 20px 16px; }
+}
+
+.class-picker-box {
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  border: 1.5px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 22px;
+}
+.month-picker-box {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 14px;
+  padding: 18px 16px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.06);
+}
+.form-input-pill {
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+.form-input-pill:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+.rule-callout {
+  background: #ffffff;
+  border-left: 4px solid #10b981;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: #166534;
+  margin-top: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="max-width: 720px; margin: 0 auto;">
-  <div class="card shadow-sm border-0">
-    <div class="card-header justify-between bg-white py-3">
-      <div class="card-title fs-lg fw-700">
-        <i class="fas fa-receipt text-primary me-2"></i>{{ title }}
+<div class="form-card-container">
+  <div class="fee-form-card">
+    <!-- Header -->
+    <div class="fee-form-header">
+      <div>
+        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.85; font-weight: 700;">
+          <i class="fas fa-file-invoice-dollar me-1"></i> Rajvi School Fee Management
+        </div>
+        <h2 style="font-size: 1.35rem; font-weight: 800; margin: 4px 0 0; color: #fff;">
+          {{ title }}
+        </h2>
       </div>
-      <a href="{% url 'fee_list' %}" class="btn btn-outline btn-sm">&larr; {% trans "Back to Fees" %}</a>
+      <a href="{% url 'fee_list' %}" class="btn btn-sm" style="background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; font-weight: 600; padding: 7px 14px; text-decoration: none;">
+        &larr; {% trans "Back to Fees" %}
+      </a>
     </div>
-    <div class="card-body p-4">
-      <form method="POST" novalidate>
+
+    <!-- Body -->
+    <div class="fee-form-body">
+      <form method="POST" id="feeEntryForm" novalidate>
         {% csrf_token %}
 
-        <!-- Class Filter for easy student selection -->
-        <div class="p-3 mb-3 rounded-3 border" style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border-color: #bfdbfe !important;">
-          <label class="form-label fw-700 text-primary mb-1" for="class_filter_select">
-            <i class="fas fa-layer-group me-1 text-primary"></i>{% trans "Filter by Class (પહેલાં ધોરણ પસંદ કરો)" %}
-          </label>
-          <select id="class_filter_select" class="form-select" onchange="filterStudentsByClass(this.value)">
+        <!-- 1. Quick Class Filter -->
+        <div class="class-picker-box">
+          <div class="d-flex justify-between items-center mb-1 flex-wrap gap-1">
+            <label class="form-label fw-800 text-primary mb-0" for="class_filter_select" style="font-size: 0.88rem;">
+              <i class="fas fa-layer-group me-1"></i>{% trans "Filter by Class (પહેલાં ધોરણ પસંદ કરો)" %}
+            </label>
+            <span class="badge" style="background: #dbeafe; color: #1e40af; font-size: 0.72rem; font-weight: 700;">
+              ઝડપી શોધ
+            </span>
+          </div>
+          <select id="class_filter_select" class="form-select mt-1" onchange="filterStudentsByClass(this.value)">
             <option value="">-- {% trans "All Classes (બધા ધોરણ)" %} --</option>
             <option value="5">Grade 5 (ધોરણ ૫)</option>
             <option value="6">Grade 6 (ધોરણ ૬)</option>
             <option value="7">Grade 7 (ધોરણ ૭)</option>
             <option value="8">Grade 8 (ધોરણ ૮)</option>
           </select>
-          <div class="form-hint fs-xs text-muted mt-1">
-            <i class="fas fa-info-circle text-info me-1"></i> ધોરણ પસંદ કરશો એટલે નીચે ફક્ત તે જ ધોરણના વિદ્યાર્થીઓ દેખાશે, જેથી શોધવામાં સરળતા રહે.
+          <div class="fs-xs text-muted mt-2">
+            <i class="fas fa-info-circle text-info me-1"></i> ધોરણ પસંદ કરશો એટલે નીચે ફક્ત તે જ ધોરણના વિદ્યાર્થીઓ ફિલ્ટર થઈ જશે.
           </div>
         </div>
 
+        <!-- 2. Student Selection -->
         <div class="form-group mb-4">
-          <label class="form-label fw-700" for="id_student">
-            <i class="fas fa-user-graduate me-1 text-primary"></i>{% trans "Student (વિદ્યાર્થી પસંદ કરો)" %} <span class="req">*</span>
+          <label class="form-label fw-800" for="id_student" style="font-size: 0.92rem; color: #0f172a;">
+            <i class="fas fa-user-graduate me-1 text-primary"></i>{% trans "Student (વિદ્યાર્થી પસંદ કરો)" %} <span class="req text-danger">*</span>
           </label>
           {{ form.student }}
-          {% if form.student.errors %}<div class="form-error">{{ form.student.errors }}</div>{% endif %}
+          {% if form.student.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.student.errors }}</div>{% endif %}
         </div>
 
-        <!-- Month & Year Selector (Auto-filled with Current Billing Month) -->
-        <div class="p-3 mb-4 rounded-3 border" style="background: #f0fdf4; border-color: #86efac !important;">
+        <!-- 3. Month & Year Box (Regular 1st-of-month cycle) -->
+        <div class="month-picker-box">
           <div class="d-flex justify-between items-center mb-2 flex-wrap gap-1">
-            <label class="form-label fw-700 text-success mb-0">
-              <i class="fas fa-calendar-check me-1"></i>{% trans "Fee For Month & Year (ક્યા મહિનાની ફી ભરાય છે?)" %} <span class="req">*</span>
+            <label class="form-label fw-800 text-success mb-0" style="font-size: 0.92rem;">
+              <i class="fas fa-calendar-check me-1"></i>{% trans "Fee For Month & Year (ક્યા મહિનાની ફી ભરાય છે?)" %} <span class="req text-danger">*</span>
             </label>
-            <span class="badge" style="background:#dcfce7; color:#15803d; font-size:0.75rem; font-weight:700; border: 1px solid #bbf7d0;">
-              <i class="fas fa-bolt me-1"></i>ચાલુ બિલિંગ મહિનો Autofill છે
+            <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 0.72rem; font-weight: 800; border: 1px solid #bbf7d0;">
+              <i class="fas fa-bolt me-1"></i>ચાલુ મહિનો Autofill
             </span>
           </div>
-          <div class="form-row mb-0">
-            <div class="form-group mb-0">
-              <label class="form-label fs-xs fw-600 text-muted" for="id_fee_month">{% trans "Month (મહિનો)" %}</label>
+          <div class="row g-2 mb-0">
+            <div class="col-12 col-md-8">
+              <label class="form-label fs-xs fw-700 text-muted" for="id_fee_month">{% trans "Month (મહિનો)" %}</label>
               {{ form.fee_month }}
-              {% if form.fee_month.errors %}<div class="form-error">{{ form.fee_month.errors }}</div>{% endif %}
+              {% if form.fee_month.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.fee_month.errors }}</div>{% endif %}
             </div>
-            <div class="form-group mb-0" style="max-width: 160px;">
-              <label class="form-label fs-xs fw-600 text-muted" for="id_fee_year">{% trans "Year (વર્ષ)" %}</label>
+            <div class="col-12 col-md-4">
+              <label class="form-label fs-xs fw-700 text-muted" for="id_fee_year">{% trans "Year (વર્ષ)" %}</label>
               {{ form.fee_year }}
-              {% if form.fee_year.errors %}<div class="form-error">{{ form.fee_year.errors }}</div>{% endif %}
+              {% if form.fee_year.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.fee_year.errors }}</div>{% endif %}
             </div>
           </div>
-          <div class="fs-xs text-muted mt-2">
-            <i class="fas fa-info-circle text-success me-1"></i>
-            <strong>નિયમ:</strong> ૧૫ સપ્ટેમ્બર થી ૧૪ ઓક્ટોબર વચ્ચે ભરાતી ફી <strong>ઓક્ટોબર</strong> મહિનાની ગણાશે. ૧ ઓક્ટોબરથી નવો મહિનો શરૂ થતાં નવો રેકોર્ડ જમા થશે અને જૂનો રેકોર્ડ સચવાયેલો રહેશે.
+          <div class="rule-callout">
+            <i class="fas fa-info-circle me-1"></i>
+            <strong>નિયમ:</strong> દર મહિનાની ૧ તારીખથી નવો મહિનો શરૂ થશે અને આખા મહિનાની નિયમિત ફી ગણાશે. નવો મહિનો શરૂ થતાં નવો હિસાબ શરૂ થશે અને જૂના તમામ રેકોર્ડ્સ હંમેશા સચવાયેલા રહેશે.
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label fw-700" for="id_amount">{% trans "Amount (₹ રકમ)" %} <span class="req">*</span></label>
+        <!-- 4. Amount and Fee Type -->
+        <div class="row g-3 mb-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-800" for="id_amount" style="font-size: 0.9rem; color: #0f172a;">
+              <i class="fas fa-rupee-sign text-success me-1"></i>{% trans "Amount (₹ રકમ)" %} <span class="req text-danger">*</span>
+            </label>
             {{ form.amount }}
-            {% if form.amount.errors %}<div class="form-error">{{ form.amount.errors }}</div>{% endif %}
+            <div class="fs-xs text-muted mt-1"><i class="fas fa-check-circle text-success me-1"></i>Default: ₹100</div>
+            {% if form.amount.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.amount.errors }}</div>{% endif %}
           </div>
-          <div class="form-group">
-            <label class="form-label fw-700" for="id_fee_type">{% trans "Fee Type (ફી નો પ્રકાર)" %} <span class="req">*</span></label>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-800" for="id_fee_type" style="font-size: 0.9rem; color: #0f172a;">
+              <i class="fas fa-tags text-primary me-1"></i>{% trans "Fee Type (ફી નો પ્રકાર)" %} <span class="req text-danger">*</span>
+            </label>
             {{ form.fee_type }}
-            {% if form.fee_type.errors %}<div class="form-error">{{ form.fee_type.errors }}</div>{% endif %}
+            {% if form.fee_type.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.fee_type.errors }}</div>{% endif %}
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label fw-700" for="id_status">{% trans "Payment Status (સ્થિતિ)" %}</label>
-            {{ form.status }}
-            {% if form.status.errors %}<div class="form-error">{{ form.status.errors }}</div>{% endif %}
-          </div>
-          <div class="form-group">
-            <label class="form-label fw-700" for="id_due_date">{% trans "Due Date" %} <span class="text-muted fs-xs font-normal">({% trans "Optional" %})</span></label>
-            {{ form.due_date }}
-            {% if form.due_date.errors %}<div class="form-error">{{ form.due_date.errors }}</div>{% endif %}
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label fw-700" for="id_payment_date">{% trans "Payment Date (ચૂકવણી તારીખ)" %}</label>
+        <!-- 5. Payment Date and Payment Status (Due Date deleted) -->
+        <div class="row g-3 mb-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-800" for="id_payment_date" style="font-size: 0.9rem; color: #0f172a;">
+              <i class="fas fa-calendar-day text-info me-1"></i>{% trans "Payment Date (ચૂકવણી તારીખ)" %} <span class="req text-danger">*</span>
+            </label>
             {{ form.payment_date }}
-            {% if form.payment_date.errors %}<div class="form-error">{{ form.payment_date.errors }}</div>{% endif %}
+            <div class="fs-xs text-muted mt-1">
+              <i class="fas fa-info-circle text-primary me-1"></i>૧ તારીખે રવિવાર હોય તો આપોઆપ ૨ તારીખ સેટ થાય છે.
+            </div>
+            {% if form.payment_date.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.payment_date.errors }}</div>{% endif %}
           </div>
-          <div class="form-group">
-            <label class="form-label fw-700" for="id_payment_method">{% trans "Payment Method (ચૂકવણી પદ્ધતિ)" %}</label>
-            {{ form.payment_method }}
-            {% if form.payment_method.errors %}<div class="form-error">{{ form.payment_method.errors }}</div>{% endif %}
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-800" for="id_status" style="font-size: 0.9rem; color: #0f172a;">
+              <i class="fas fa-toggle-on text-primary me-1"></i>{% trans "Payment Status (સ્થિતિ)" %}
+            </label>
+            {{ form.status }}
+            {% if form.status.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.status.errors }}</div>{% endif %}
           </div>
         </div>
 
-        <div class="d-flex justify-end gap-2 mt-5 pt-3 border-top">
-          <a href="{% url 'fee_list' %}" class="btn btn-outline">{% trans "Cancel" %}</a>
-          <button type="submit" class="btn btn-primary btn-lg px-4">
+        <!-- 6. Payment Method -->
+        <div class="form-group mb-4">
+          <label class="form-label fw-800" for="id_payment_method" style="font-size: 0.9rem; color: #0f172a;">
+            <i class="fas fa-money-check-alt text-primary me-1"></i>{% trans "Payment Method (ચૂકવણી પદ્ધતિ)" %}
+          </label>
+          {{ form.payment_method }}
+          {% if form.payment_method.errors %}<div class="form-error text-danger fs-xs mt-1">{{ form.payment_method.errors }}</div>{% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-between items-center flex-wrap gap-2 pt-4 border-top">
+          <a href="{% url 'fee_list' %}" class="btn btn-outline" style="border-radius: 10px; font-weight: 600; padding: 10px 20px;">
+            {% trans "Cancel" %}
+          </a>
+          <button type="submit" class="btn btn-primary" style="border-radius: 10px; font-weight: 800; padding: 11px 28px; font-size: 1rem; box-shadow: 0 4px 14px rgba(37,99,235,0.35);">
             <i class="fas fa-save me-1"></i>{% trans "Save Fee Record" %}
           </button>
         </div>
@@ -121,6 +236,7 @@
 </div>
 
 <script>
+  // ── Class Filter ─────────────────────────────────────────────────────────
   function filterStudentsByClass(selectedClass) {
     const studentSelect = document.getElementById('id_student');
     if (!studentSelect) return;
@@ -153,5 +269,60 @@
       studentSelect.selectedIndex = 0;
     }
   }
+
+  // ── Auto-adjust Payment Date when Month or Year changes ──────────────────
+  function updatePaymentDateToFirstWorkingDay() {
+    const monthEl = document.getElementById('id_fee_month');
+    const yearEl = document.getElementById('id_fee_year');
+    const paymentDateEl = document.getElementById('id_payment_date');
+
+    if (!monthEl || !yearEl || !paymentDateEl) return;
+
+    const monthVal = parseInt(monthEl.value, 10);
+    const yearVal = parseInt(yearEl.value, 10);
+
+    if (isNaN(monthVal) || isNaN(yearVal) || monthVal < 1 || monthVal > 12) return;
+
+    // Check 1st of that month
+    let d = new Date(yearVal, monthVal - 1, 1);
+    // In JavaScript getDay(): 0 = Sunday
+    if (d.getDay() === 0) {
+      d.setDate(2); // Skip Sunday, set to 2nd
+    }
+
+    // Format YYYY-MM-DD
+    const pad = num => (num < 10 ? '0' + num : num);
+    const formatted = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+
+    // Only set if not already set or if user is adding a new fee
+    if (!paymentDateEl.value || paymentDateEl.dataset.autofilled === 'true' || !paymentDateEl.value.trim()) {
+      paymentDateEl.value = formatted;
+      paymentDateEl.dataset.autofilled = 'true';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const monthEl = document.getElementById('id_fee_month');
+    const yearEl = document.getElementById('id_fee_year');
+    const paymentDateEl = document.getElementById('id_payment_date');
+
+    if (monthEl) {
+      monthEl.addEventListener('change', function() {
+        if (paymentDateEl) paymentDateEl.dataset.autofilled = 'true';
+        updatePaymentDateToFirstWorkingDay();
+      });
+    }
+    if (yearEl) {
+      yearEl.addEventListener('change', function() {
+        if (paymentDateEl) paymentDateEl.dataset.autofilled = 'true';
+        updatePaymentDateToFirstWorkingDay();
+      });
+    }
+    if (paymentDateEl) {
+      paymentDateEl.addEventListener('input', function() {
+        paymentDateEl.dataset.autofilled = 'false';
+      });
+    }
+  });
 </script>
 {% endblock %}
