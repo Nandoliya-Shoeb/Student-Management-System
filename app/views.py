@@ -1719,6 +1719,7 @@ def fee_create(request):
         'title': _('Add Fee'),
         'billing_month': billing_month,
         'billing_year': billing_year,
+        'students': form.fields['student'].queryset,
     })
 
 
@@ -1738,7 +1739,12 @@ def fee_edit(request, pk):
     else:
         form = FeeForm(instance=fee)
 
-    return render(request, 'fees/form.html', {'form': form, 'title': _('Edit Fee')})
+    return render(request, 'fees/form.html', {
+        'form': form,
+        'title': _('Edit Fee'),
+        'students': form.fields['student'].queryset,
+        'fee': fee,
+    })
 
 
 @login_required(login_url='login')

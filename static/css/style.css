@@ -1376,18 +1376,59 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 }
 
 @media (max-width: 768px) {
-  .page-content { padding: var(--sp-4); }
-  .stat-cards { grid-template-columns: repeat(2, 1fr); }
-  .form-row   { grid-template-columns: 1fr; }
-  .welcome-banner { padding: var(--sp-5); }
+  body { overflow-x: hidden; }
+  .page-content { padding: 12px 14px; }
+  .stat-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .form-row   { grid-template-columns: 1fr; gap: 12px; }
+  .welcome-banner { padding: var(--sp-4); }
   .welcome-name { font-size: var(--fs-lg); }
+
+  /* Prevent iOS Safari auto-zoom on input focus */
+  input, select, textarea, .form-control, .form-select {
+    font-size: 16px !important;
+    min-height: 44px;
+  }
+
+  /* Smooth momentum touch scrolling for tables */
+  .table-responsive, [style*="overflow-x: auto"], [style*="overflow-x:auto"] {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  /* Action buttons & touch targets */
+  .btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pagination .page-link {
+    padding: 8px 12px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  /* Topbar mobile padding */
+  .topbar {
+    padding: 0 14px;
+    height: 56px;
+  }
 }
 
 @media (max-width: 480px) {
+  .page-content { padding: 10px 10px; }
   .stat-cards { grid-template-columns: 1fr; }
-  .login-card { padding: var(--sp-6); }
-  .topbar { padding: 0 var(--sp-4); }
+  .login-card { padding: var(--sp-5); margin: 10px; }
+  .topbar { padding: 0 10px; }
+  .card-body { padding: 14px; }
+  .card-header { padding: 12px 14px; }
+
+  /* Stack header actions cleanly */
+  .d-flex.justify-between.items-center.flex-wrap {
+    gap: 8px;
+  }
 }
+
 
 /* 24. Motion preference */
 @media (prefers-reduced-motion: reduce) {
